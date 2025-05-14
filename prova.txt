@@ -1,2 +1,6 @@
+<<<<<<< Updated upstream
 Simona e Federica ciao ciao 
 
+=======
+federica
+>>>>>>> Stashed changes
