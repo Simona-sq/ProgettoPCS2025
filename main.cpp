@@ -17,22 +17,21 @@ int main(int argc, char* argv[])
 	unsigned int v2 = 0;
 	
 	// controllo che il tipo dei valori inseriti sia int
-	cout << argc << endl;
 	if (argc == 5) {
-		p = stoi(argv[1]);
-		q = atoi(argv[2]);
-		b = atoi(argv[3]);
-		c = atoi(argv[4]);
-        cout << "ok" << p << q << b << c << endl;
+		p = stoi(argv[1]);  //commenta stoi
+		q = stoi(argv[2]);
+		b = stoi(argv[3]);
+		c = stoi(argv[4]);
+		cout << "Input ricevuto: p=" << p << ", q=" << q << ", b=" << b << ", c=" << c << "\n";
     }
 	else if (argc == 7) {
-		p = atoi(argv[1]);
-		q = atoi(argv[2]);
-		b = atoi(argv[3]);
-		c = atoi(argv[4]);
-		v1 = atoi(argv[5]);
-		v2 = atoi(argv[6]);
-        cout << "ok" << p << q << b << c << v1 << v2 << endl;
+		p = stoi(argv[1]);
+		q = stoi(argv[2]);
+		b = stoi(argv[3]);
+		c = stoi(argv[4]);
+		v1 = stoi(argv[5]);
+		v2 = stoi(argv[6]);
+		cout << "Input ricevuto: p=" << p << ", q=" << q << ", b=" << b << ", c=" << c << ", v1=" << v1 << ", v2=" << v2 << "\n";
     }
 	else
  	{
@@ -41,27 +40,16 @@ int main(int argc, char* argv[])
 	}
 
 	// controllo le condizioni su p e q
-	cout << p << " " << q << " "<< double (1.0/p) <<endl;
 	if (p < 3 || q < 3 || double (1.0/p)+double (1.0/q) <= 0.5){
 		cerr << "Errore: i parametri p e q non rispettano le condizioni dei poligoni platonici.\n";
     	return 1;
 	}
-	
-
-	// controllo la disugualianza dei poligoni platonici
-
 
 	// controllo delle classi di triangolazione valide
-	
 	if (b != c && b!= 0 && c!= 0){
 		cerr << "Errore: classe non trattata.\n";
 		return 1;
 	}
-
-	std::cout << "Input ricevuto: p=" << p << ", q=" << q << ", b=" << b << ", c=" << c << "\n";
-
-
-
 
 	Polyhedron mesh;
 	return 0;
