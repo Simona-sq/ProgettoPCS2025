@@ -27,4 +27,10 @@ bool ImportCell1Ds(Polyhedron& mesh);
 /// return the result of the reading, true if is success, false otherwise
 bool ImportCell2Ds(Polyhedron& mesh);
 
+Vector3d normalize(Vector3d v);
+
+pair<vector<Vector3d>, vector<vector<unsigned int>>> getSolidData(unsigned int& q);
+
+Polyhedron buildPlatonicSolid(unsigned int& p, unsigned int& q, unsigned int& b, unsigned int& c);
+
 }

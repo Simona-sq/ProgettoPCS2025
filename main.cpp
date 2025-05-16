@@ -50,12 +50,31 @@ int main(int argc, char* argv[])
 		cerr << "Errore: classe non trattata.\n";
 		return 1;
 	}
-	
-	// Funzione di normalizzazione 
-	Vector3d normalize(Vector3d v) {
-		return v.normalized(); // vettore normalizzato
+
+
+	auto [verts, faces] = getSolidData(q);
+	Polyhedron mesh = buildPlatonicSolid(p, q, b, c);
+
+	// stampa vertici
+	std::cout << "Vertici:\n";
+	for (size_t i = 0; i < verts.size(); ++i) 
+	{
+		const auto& v = verts[i];
+		std::cout << "v" << i << ": (" 
+				<< v(0) << ", " 
+				<< v(1) << ", " 
+				<< v(2) << ")\n";
 	}
 
-	Polyhedron mesh;
+	// stampa facce
+	std::cout << "Facce:\n";
+	for (size_t i = 0; i < faces.size(); ++i) {
+		std::cout << "f" << i << ": ";
+		for (unsigned int vid : faces[i]) {
+			std::cout << vid << " ";
+		}
+		std::cout << "\n";
+	}
+
 	return 0;
 }

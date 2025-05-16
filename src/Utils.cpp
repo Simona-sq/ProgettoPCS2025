@@ -212,4 +212,129 @@ bool ImportCell2Ds(Polyhedron& mesh)
     return true;
 }
 
+// ***************************************************************************
+// Funzione di normalizzazione 
+Vector3d normalize(Vector3d v) 
+{
+    return v.normalized(); // vettore normalizzato
+}
+
+// ***************************************************************************
+// Definisco i vertici e le facce del solido platonico di partenza
+pair<vector<Vector3d>, vector<vector<unsigned int>>> getSolidData(unsigned int& q) 
+{
+    vector<Vector3d> verts;
+    vector<vector<unsigned int>> faces;
+
+    if (q == 3) {
+        // Tetraedro regolare
+        verts = {
+            {0.0, 0.0, sqrt(3)},
+            {sqrt(8.0/3.0), 0.0, -1.0/sqrt(3)},
+            {-sqrt(2.0/3.0), sqrt(2.0), -1.0/sqrt(3)},
+            {-sqrt(2.0/3.0), -sqrt(2.0), -1.0/sqrt(3)}
+        };
+        for (auto& v : verts) v = normalize(v);
+        faces = {
+            {0, 1, 2},
+            {0, 2, 3},
+            {0, 3, 1},
+            {1, 3, 2}
+        };
+    } else if (q == 4) {
+        // Ottaedro
+        verts = {
+            {1, 0, 0}, {-1, 0, 0},
+            {0, 1, 0}, {0, -1, 0},
+            {0, 0, 1}, {0, 0, -1}
+        };
+        for (auto& v : verts) v = normalize(v);
+        faces = {
+            {0, 4, 2}, {2, 4, 1}, {1, 4, 3}, {3, 4, 0},
+            {0, 2, 5}, {2, 1, 5}, {1, 3, 5}, {3, 0, 5}
+        };
+    } else if (q == 5) {
+        // Icosaedro
+        double phi = (1 + sqrt(5.0)) / 2;
+        double a = 1;
+        double b = 1 / phi;
+        vector<Vector3d> raw = {
+            { 0,  b, -a}, { b,  a,  0}, {-b,  a,  0},
+            { 0,  b,  a}, { 0, -b,  a}, {-a,  0,  b},
+            { 0, -b, -a}, { a,  0, -b}, { a,  0,  b},
+            {-a,  0, -b}, {-b, -a,  0}, { b, -a,  0}
+        };
+        for (auto& v : raw) verts.push_back(normalize(v));
+        faces = {
+            {0, 1, 2}, {3, 2, 1}, {3, 4, 5}, {3, 8, 4}, {0, 6, 7},
+            {0, 9, 6}, {4, 10, 11}, {6, 11, 10}, {2, 5, 9}, {11, 9, 5},
+            {1, 7, 8}, {10, 8, 7}, {3, 5, 2}, {3, 1, 8}, {0, 2, 9},
+            {0, 7, 1}, {6, 9, 11}, {6, 10, 7}, {4, 8, 10}, {4, 11, 5}
+        };
+    }
+
+    return {verts, faces};
+}
+
+// ***************************************************************************
+// Riempio la struttura Polyhedron
+Polyhedron buildPlatonicSolid(unsigned int& p, unsigned int& q, unsigned int& b, unsigned int& c) 
+{
+    Polyhedron P;
+
+    auto [verts, faces] = getSolidData(q);
+
+    // Riempimento Cell0Ds
+    P.NumCell0Ds = verts.size();
+    P.Cell0DsCoordinates = MatrixXd(3, P.NumCell0Ds);
+    for (unsigned int i = 0; i < verts.size(); ++i) 
+    {
+        P.Cell0DsId.push_back(i);
+        P.Cell0DsCoordinates.col(i) = verts[i];
+        P.IdCell0Ds , verts , verts; 
+    }
+    
+
+    // Creazione lati univoci
+    map<pair<unsigned int, unsigned int>, unsigned int> edgeMap;
+    unsigned int edgeCounter = 0;
+
+    for (unsigned int fid = 0; fid < faces.size(); ++fid) {
+        const auto& f = faces[fid];
+        P.Cell2DsId.push_back(fid);
+        P.Cell2DsVertices.push_back(f);
+
+        vector<unsigned int> edgeIds;
+        for (int i = 0; i < f.size(); ++i) {
+            unsigned int v1 = f[i];
+            unsigned int v2 = f[(i + 1) % f.size()];
+            auto key = minmax(v1, v2);
+            if (edgeMap.find(key) == edgeMap.end()) {
+                edgeMap[key] = edgeCounter++;
+                P.Cell1DsId.push_back(edgeMap[key]);
+            }
+            edgeIds.push_back(edgeMap[key]);
+        }
+        P.Cell2DsEdges.push_back(edgeIds);
+    }
+
+    // Riempimento Cell1Ds
+    P.NumCell1Ds = edgeMap.size();
+    P.Cell1DsExtrema = MatrixXi(2, P.NumCell1Ds);
+    for (const auto& [key, eid] : edgeMap) {
+        P.Cell1DsExtrema(0, eid) = key.first;
+        P.Cell1DsExtrema(1, eid) = key.second;
+    }
+
+    // Cell3Ds (1 solo poliedro)
+    P.NumCell2Ds = faces.size();
+    P.NumCell3Ds = 1;
+    P.Cell3DsId.push_back(0);
+    P.Cell3DsVertices.push_back(P.Cell0DsId);
+    P.Cell3DsEdges.push_back(P.Cell1DsId);
+    P.Cell3DsFaces.push_back(P.Cell2DsId);
+
+    return P;
+}
+
 }

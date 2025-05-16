@@ -21,7 +21,7 @@ struct Polyhedron
 
     unsigned int NumCell1Ds = 0; // numero di lati
     std::vector<unsigned int> Cell1DsId = {}; // Cell1DsId è il vettore di ID dei lati (dimensione 1 x NumCell1Ds)
-    Eigen::MatrixXi Cell1DsExtrema = {}; // Cell1DExtrema è la matrice contenente gli ID dei vertici iiniziale e finale che caratterizzano il lato (dimensione 2 x NumCell1Ds)
+    Eigen::MatrixXi Cell1DsExtrema = {}; // Cell1DExtrema è la matrice contenente gli ID dei vertici iniziale e finale che caratterizzano il lato (dimensione 2 x NumCell1Ds)
     
     unsigned int NumCell2Ds = 0; // numero di facce
     std::vector<unsigned int> Cell2DsId = {}; // Cell2DsId è il vettore di ID delle facce (dimensione 1 x NumCell2Ds)
