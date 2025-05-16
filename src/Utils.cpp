@@ -5,11 +5,15 @@
 
 #include "Polyhedron.hpp"
 
+using namespace std;
+
+
 namespace PolyhedronLibrary
 {
+
 // ***************************************************************************
 // Funzione di normalizzazione 
-Vector3d normalize(Vector3d v) 
+Vector3d normalizza(Vector3d v) 
 {
     return v.normalized(); // vettore normalizzato
 }
@@ -29,7 +33,7 @@ pair<vector<Vector3d>, vector<vector<unsigned int>>> getSolidData(unsigned int& 
             {-sqrt(2.0/3.0), sqrt(2.0), -1.0/sqrt(3)},
             {-sqrt(2.0/3.0), -sqrt(2.0), -1.0/sqrt(3)}
         };
-        for (auto& v : verts) v = normalize(v);
+        for (auto& v : verts) v = normalizza(v);
         faces = {
             {0, 1, 2},
             {0, 2, 3},
@@ -43,7 +47,7 @@ pair<vector<Vector3d>, vector<vector<unsigned int>>> getSolidData(unsigned int& 
             {0, 1, 0}, {0, -1, 0},
             {0, 0, 1}, {0, 0, -1}
         };
-        for (auto& v : verts) v = normalize(v);
+        for (auto& v : verts) v = normalizza(v);
         faces = {
             {0, 4, 2}, {2, 4, 1}, {1, 4, 3}, {3, 4, 0},
             {0, 2, 5}, {2, 1, 5}, {1, 3, 5}, {3, 0, 5}
@@ -57,7 +61,7 @@ pair<vector<Vector3d>, vector<vector<unsigned int>>> getSolidData(unsigned int& 
             {-1.051462, 0.0, -0.5257311}, {-0.3249197, -1.0, -0.5257311}, {0.0, 0.0, -1.175571}
         };
 
-        for (auto& v : raw) verts.push_back(normalize(v));
+        for (auto& v : raw) verts.push_back(normalizza(v));
 
         faces = {
             {0, 1, 2}, {0, 2, 3}, {0, 3, 4}, {0, 4, 5}, {0, 5, 1},
@@ -72,7 +76,7 @@ pair<vector<Vector3d>, vector<vector<unsigned int>>> getSolidData(unsigned int& 
 
 // ***************************************************************************
 // Riempio la struttura Polyhedron
-Polyhedron buildPlatonicSolid(unsigned int& p, unsigned int& q, unsigned int& b, unsigned int& c) 
+Polyhedron buildPlatonicSolid(unsigned int& q) 
 {
     Polyhedron P;
 
@@ -85,7 +89,7 @@ Polyhedron buildPlatonicSolid(unsigned int& p, unsigned int& q, unsigned int& b,
     {
         P.Cell0DsId.push_back(i);
         P.Cell0DsCoordinates.col(i) = verts[i];
-        P.IdCell0Ds , verts , verts;
+        P.IdCell0Ds , verts , verts; // RIVEDERE !!!
     }
     
 
@@ -151,6 +155,7 @@ Polyhedron buildPlatonicSolid(unsigned int& p, unsigned int& q, unsigned int& b,
 // Funzione per la triangolazione
 void triangulateClass1(PolyhedronLibrary::Polyhedron& P, unsigned int& t_value)
 {
+    cout << "inizio triangolazone" << endl;
     using namespace Eigen;
 
     // Copia dei dati iniziali
@@ -158,22 +163,23 @@ void triangulateClass1(PolyhedronLibrary::Polyhedron& P, unsigned int& t_value)
     unsigned int nextEdgeId = P.NumCell1Ds;
     unsigned int nextFaceId = P.NumCell2Ds;
 
-    std::map<std::pair<unsigned int, unsigned int>, unsigned int> edgeMap;
+    map<pair<unsigned int, unsigned int>, unsigned int> edgeMap;
 
-    // Prepara i vecchi spigoli nel map per evitare duplicati
+    // Prepara i vecchi lati nel map per evitare duplicati
     for (unsigned int eid = 0; eid < P.NumCell1Ds; ++eid) {
+        cout << "triangolazione del lato" << eid << endl;
         auto v1 = P.Cell1DsExtrema(0, eid);
         auto v2 = P.Cell1DsExtrema(1, eid);
-        auto key = std::minmax(v1, v2);
+        auto key = minmax(v1, v2); // minmax(v1,v2) ordina v1 e v2 in ordine cresceste per non contare due volte lo stesso lato
         edgeMap[key] = eid;
     }
+    cout << P.Cell2DsVertices.size()<< endl;
 
-    for (size_t fid = 0; fid < P.Cell2DsVertices.size(); ++fid) {
+    vector<vector<unsigned int>> originalFaces = P.Cell2DsVertices;
+    for (size_t fid = 0; fid < originalFaces.size(); ++fid) 
+    {
+        cout << "triangolazione della faccia" << fid << endl;
         const auto& face = P.Cell2DsVertices[fid];
-        if (face.size() != 3) {
-            std::cerr << "Solo triangoli supportati per la classe I\n";
-            continue;
-        }
 
         unsigned int A = face[0];
         unsigned int B = face[1];
@@ -183,11 +189,11 @@ void triangulateClass1(PolyhedronLibrary::Polyhedron& P, unsigned int& t_value)
         Vector3d vB = P.Cell0DsCoordinates.col(B);
         Vector3d vC = P.Cell0DsCoordinates.col(C);
 
-        std::vector<std::vector<unsigned int>> rows;
+        vector<vector<unsigned int>> rows;
 
         // Costruisci i punti interni con interpolazione baricentrica
         for (unsigned int i = 0; i <= t_value; ++i) {
-            std::vector<unsigned int> row;
+            vector<unsigned int> row;
             for (unsigned int j = 0; j <= i; ++j) {
                 double alpha = double(t_value - i) / t_value;
                 double beta  = double(i - j) / t_value;
@@ -209,18 +215,18 @@ void triangulateClass1(PolyhedronLibrary::Polyhedron& P, unsigned int& t_value)
         for (unsigned int i = 0; i < t_value; ++i) {
             for (unsigned int j = 0; j < i; ++j) {
                 // triangolo in basso
-                std::vector<unsigned int> tri1 = { rows[i][j], rows[i + 1][j], rows[i + 1][j + 1] };
-                std::vector<unsigned int> tri2 = { rows[i][j], rows[i][j + 1], rows[i + 1][j + 1] };
+                vector<unsigned int> tri1 = { rows[i][j], rows[i + 1][j], rows[i + 1][j + 1] };
+                vector<unsigned int> tri2 = { rows[i][j], rows[i][j + 1], rows[i + 1][j + 1] };
 
                 for (auto& tri : {tri1, tri2}) {
                     P.Cell2DsVertices.push_back(tri);
                     P.Cell2DsId.push_back(nextFaceId++);
 
-                    std::vector<unsigned int> edgeIds;
+                    vector<unsigned int> edgeIds;
                     for (int k = 0; k < 3; ++k) {
                         auto v1 = tri[k];
                         auto v2 = tri[(k + 1) % 3];
-                        auto key = std::minmax(v1, v2);
+                        auto key = minmax(v1, v2);
                         if (edgeMap.find(key) == edgeMap.end()) {
                             edgeMap[key] = nextEdgeId++;
                             P.Cell1DsId.push_back(edgeMap[key]);
@@ -232,15 +238,15 @@ void triangulateClass1(PolyhedronLibrary::Polyhedron& P, unsigned int& t_value)
             }
 
             // Triangolo in alto (ultima colonna)
-            std::vector<unsigned int> tri = { rows[i][i], rows[i + 1][i], rows[i + 1][i + 1] };
+            vector<unsigned int> tri = { rows[i][i], rows[i + 1][i], rows[i + 1][i + 1] };
             P.Cell2DsVertices.push_back(tri);
             P.Cell2DsId.push_back(nextFaceId++);
 
-            std::vector<unsigned int> edgeIds;
+            vector<unsigned int> edgeIds;
             for (int k = 0; k < 3; ++k) {
                 auto v1 = tri[k];
                 auto v2 = tri[(k + 1) % 3];
-                auto key = std::minmax(v1, v2);
+                auto key = minmax(v1, v2);
                 if (edgeMap.find(key) == edgeMap.end()) {
                     edgeMap[key] = nextEdgeId++;
                     P.Cell1DsId.push_back(edgeMap[key]);
@@ -250,6 +256,7 @@ void triangulateClass1(PolyhedronLibrary::Polyhedron& P, unsigned int& t_value)
             P.Cell2DsEdges.push_back(edgeIds);
         }
     }
+    cout << "triangolazione completata" << endl;
 
     // Riempimento Cell1DsExtrema finale
     P.NumCell0Ds = nextPointId;
@@ -271,4 +278,11 @@ void triangulateClass1(PolyhedronLibrary::Polyhedron& P, unsigned int& t_value)
 
     //return P;
 }
+
+
+
+
+
+
+
 }

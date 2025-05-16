@@ -58,7 +58,7 @@ int main(int argc, char* argv[])
 	// Creo il solido platonico e riempo la struct
 	if (p == 3)
 	{
-		Polyhedron mesh = buildPlatonicSolid(p, q, b, c);
+		Polyhedron mesh = buildPlatonicSolid(q);
 	
 		Gedim::UCDUtilities utilities;
 			{

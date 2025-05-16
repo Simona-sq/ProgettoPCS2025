@@ -5,6 +5,7 @@
 
 using namespace std;
 
+
 namespace PolyhedronLibrary
 {
 /// Import the triangular mesh and test if the mesh is correct
@@ -27,11 +28,11 @@ bool ImportCell1Ds(Polyhedron& mesh);
 /// return the result of the reading, true if is success, false otherwise
 bool ImportCell2Ds(Polyhedron& mesh);
 
-Vector3d normalize(Vector3d v);
+Vector3d normalizza(Vector3d v);
 
 pair<vector<Vector3d>, vector<vector<unsigned int>>> getSolidData(unsigned int& q);
 
-Polyhedron buildPlatonicSolid(unsigned int& p, unsigned int& q, unsigned int& b, unsigned int& c);
+Polyhedron buildPlatonicSolid(unsigned int& q);
 
 void triangulateClass1(PolyhedronLibrary::Polyhedron& P, unsigned int& t_value);
 
