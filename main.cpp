@@ -1,13 +1,4 @@
 #include <iostream>
-
-#include <Eigen/Dense>
-#include <vector>
-#include <map>
-#include <set>
-#include <tuple>
-#include <cmath>
-#include <algorithm>
-
 #include "Polyhedron.hpp"
 #include "Utils.hpp"
 #include "UCDUtilities.hpp"
@@ -67,7 +58,6 @@ int main(int argc, char* argv[])
 	// Creo il solido platonico e riempo la struct
 	if (p == 3)
 	{
-		auto [verts, faces] = getSolidData(q);
 		Polyhedron mesh = buildPlatonicSolid(p, q, b, c);
 	
 		Gedim::UCDUtilities utilities;
@@ -82,16 +72,30 @@ int main(int argc, char* argv[])
 										mesh.Cell1DsExtrema);
 			}
 
-		if (b != c) //TRINAGOLAZIONE DI CLASSE I
+		if (b != c) //TRIANGOLAZIONE DI CLASSE I
 		{
 			cout<<"triangolazione di classe I"<<endl;
 			unsigned int t_value = b + c; //valore che mi indica in quante parti dividere ogni lato del triangolo
+			triangulateClass1(mesh, t_value);
+
+		Gedim::UCDUtilities utilities;
+			{
+				utilities.ExportPoints("./Cell0Ds_T.inp",
+									mesh.Cell0DsCoordinates);
+			}
+
+			{
+				utilities.ExportSegments("./Cell1Ds_T.inp",
+										mesh.Cell0DsCoordinates,
+										mesh.Cell1DsExtrema);
+			}
 		}
 
-		else //TRINAGOLAZIONE DI CLASSE II
+		else //TRIANGOLAZIONE DI CLASSE II
 		{
 			cout<<"triangolazione di classe II"<<endl;
 		}
+
 
 	}
 

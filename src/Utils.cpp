@@ -3,215 +3,10 @@
 #include <fstream>
 #include <sstream>
 
+#include "Polyhedron.hpp"
+
 namespace PolyhedronLibrary
 {
-bool ImportMesh(Polyhedron& mesh)
-{
-
-    if(!ImportCell0Ds(mesh))
-        return false;
-
-    if(!ImportCell1Ds(mesh))
-        return false;
-
-    if(!ImportCell2Ds(mesh))
-        return false;
-
-    return true;
-
-}
-// ***************************************************************************
-// importo le celle 0D
-bool ImportCell0Ds(Polyhedron& mesh)
-{
-    ifstream file("./Cell0Ds.csv");
-
-    if(file.fail())
-        return false;
-
-    list<string> listLines;
-
-    string line;
-    while (getline(file, line))
-        listLines.push_back(line);
-
-    file.close();
-
-    // remove header
-    listLines.pop_front();
-
-    mesh.NumCell0Ds = listLines.size();
-
-    if (mesh.NumCell0Ds == 0)
-    {
-        cerr << "There is no cell 0D" << endl;
-        return false;
-    }
-
-    mesh.Cell0DsId.reserve(mesh.NumCell0Ds);
-    mesh.Cell0DsCoordinates = Eigen::MatrixXd::Zero(3, mesh.NumCell0Ds);
-
-    for (const string& line : listLines)
-    {
-        istringstream converter(line);
-        string token;
-
-        unsigned int id;
-        Vector2d coord;
-
-        // Adesso leggi i dati separati da ';'
-        getline(converter, token, ';');
-        id = static_cast<unsigned int>(stoi(token));
-
-        getline(converter, token, ';');
-
-        getline(converter, token, ';');
-        coord(0) = stod(token);
-
-        getline(converter, token, ';');
-        coord(1) = stod(token);
-
-        mesh.Cell0DsId.push_back(id);
-
-        mesh.Cell0DsCoordinates(0, id) = coord(0);
-        mesh.Cell0DsCoordinates(1, id) = coord(1);
-
-        //new
-        const auto insert = mesh.IdCell0Ds.find(id);
-            if(insert == mesh.IdCell0Ds.end())
-            {
-                mesh.IdCell0Ds.insert({id, {coord(0), coord(1)}});
-            }
-            else
-            {
-                insert->second.push_back(id);
-            }
-
-    }
-
-    return true;
-}
-// ***************************************************************************
-//Qui viene fatta la stessa cosa con le celle 1D, con 1 id, 1 marker, 1 origine e 1 fine (del segmento)
-bool ImportCell1Ds(Polyhedron& mesh)
-{
-    ifstream file("./Cell1Ds.csv");
-
-    if(file.fail())
-        return false;
-
-    list<string> listLines;
-    string line;
-    while (getline(file, line))
-        listLines.push_back(line);
-
-    file.close();
-
-    // remove header
-    listLines.pop_front();
-
-    mesh.NumCell1Ds = listLines.size();
-
-    if (mesh.NumCell1Ds == 0)
-    {
-        cerr << "There is no cell 1D" << endl;
-        return false;
-    }
-
-    mesh.Cell1DsId.reserve(mesh.NumCell1Ds);
-    mesh.Cell1DsExtrema = Eigen::MatrixXi(2, mesh.NumCell1Ds); // 2 righe, NumCell1Ds colonne
-
-    for (const string& line : listLines)
-    {
-        istringstream converter(line);
-        string token;
-
-        unsigned int id;
-        unsigned int vertex0;
-        unsigned int vertex1;
-
-        getline(converter, token, ';');
-        id = static_cast<unsigned int>(stoi(token));
-
-        getline(converter, token, ';');
-
-        getline(converter, token, ';');
-        vertex0 = static_cast<unsigned int>(stoi(token));
-
-        getline(converter, token, ';');
-        vertex1 = static_cast<unsigned int>(stoi(token));
-
-        mesh.Cell1DsExtrema(0, id) = vertex0;
-        mesh.Cell1DsExtrema(1, id) = vertex1;
-
-        mesh.Cell1DsId.push_back(id);
-
-    }
-
-    return true;
-}
-// ***************************************************************************
-//Qui viene fatta la stessa cosa con le celle 2D, con 1 id, 3 vertici e 3 lati
-bool ImportCell2Ds(Polyhedron& mesh)
-{
-    ifstream file;
-    file.open("./Cell2Ds.csv");
-
-    if(file.fail())
-        return false;
-
-    list<string> listLines; // creo una lista che conterrà tutte le righe del file salvate come stringhe
-    string line;
-    while (getline(file, line))
-        listLines.push_back(line);
-
-    file.close(); // non mi serve più il file quindi lo chiudo
-
-    // tolgo l'intestazione
-    listLines.pop_front();
-
-    mesh.NumCell2Ds = listLines.size(); //conta tutte le righe rimanenti, che corrsipondono al numero di POLIGONI (celle 2D)
-
-    if (mesh.NumCell2Ds == 0)
-    {
-        cerr << "There is no cell 2D" << endl;
-        return false;
-    }
-
-    mesh.Cell2DsId.reserve(mesh.NumCell2Ds); //spazio per id dei triangoli
-    mesh.Cell2DsVertices.reserve(mesh.NumCell2Ds); //spazio per vertici dei triangoli
-    mesh.Cell2DsEdges.reserve(mesh.NumCell2Ds); //spazio per lati dei triangoli
-
-    for (const string& line : listLines)
-    {
-        istringstream converter(line); 
-
-        // Leggo i primi tre campi della riga
-        unsigned int id, marker, numVertices;
-        char delimiter;
-
-        converter >> id >> delimiter >> marker >> delimiter >> numVertices;
-
-        vector<unsigned int> vertices(numVertices); //creo un vettore che contiene i vertici (che sono di un numero pari a numVertices)
-        for(unsigned int i = 0; i < numVertices; i++)
-            converter >> delimiter >> vertices[i];
-
-        unsigned int numEdges; //leggo il numero di lati
-        converter >> delimiter >> numEdges;
-        //std::cout << line << std::endl;
-        vector<unsigned int> edges(numEdges); //creo un vettore che contiene i lati (che sono di un numero pari a numEdges)
-        for(unsigned int i = 0; i < numEdges; i++)
-            converter >> delimiter >> edges[i];
-
-        
-        mesh.Cell2DsId.push_back(id);
-        mesh.Cell2DsVertices.push_back(vertices);
-        mesh.Cell2DsEdges.push_back(edges);
-    }
-
-    return true;
-}
-
 // ***************************************************************************
 // Funzione di normalizzazione 
 Vector3d normalize(Vector3d v) 
@@ -350,7 +145,130 @@ Polyhedron buildPlatonicSolid(unsigned int& p, unsigned int& q, unsigned int& b,
 
     return P;
 }
-}
+
 
 // ***************************************************************************
 // Funzione per la triangolazione
+void triangulateClass1(PolyhedronLibrary::Polyhedron& P, unsigned int& t_value)
+{
+    using namespace Eigen;
+
+    // Copia dei dati iniziali
+    unsigned int nextPointId = P.NumCell0Ds;
+    unsigned int nextEdgeId = P.NumCell1Ds;
+    unsigned int nextFaceId = P.NumCell2Ds;
+
+    std::map<std::pair<unsigned int, unsigned int>, unsigned int> edgeMap;
+
+    // Prepara i vecchi spigoli nel map per evitare duplicati
+    for (unsigned int eid = 0; eid < P.NumCell1Ds; ++eid) {
+        auto v1 = P.Cell1DsExtrema(0, eid);
+        auto v2 = P.Cell1DsExtrema(1, eid);
+        auto key = std::minmax(v1, v2);
+        edgeMap[key] = eid;
+    }
+
+    for (size_t fid = 0; fid < P.Cell2DsVertices.size(); ++fid) {
+        const auto& face = P.Cell2DsVertices[fid];
+        if (face.size() != 3) {
+            std::cerr << "Solo triangoli supportati per la classe I\n";
+            continue;
+        }
+
+        unsigned int A = face[0];
+        unsigned int B = face[1];
+        unsigned int C = face[2];
+
+        Vector3d vA = P.Cell0DsCoordinates.col(A);
+        Vector3d vB = P.Cell0DsCoordinates.col(B);
+        Vector3d vC = P.Cell0DsCoordinates.col(C);
+
+        std::vector<std::vector<unsigned int>> rows;
+
+        // Costruisci i punti interni con interpolazione baricentrica
+        for (unsigned int i = 0; i <= t_value; ++i) {
+            std::vector<unsigned int> row;
+            for (unsigned int j = 0; j <= i; ++j) {
+                double alpha = double(t_value - i) / t_value;
+                double beta  = double(i - j) / t_value;
+                double gamma = double(j) / t_value;
+                Vector3d point = alpha * vA + beta * vB + gamma * vC;
+
+                // Verifica duplicati (facoltativo)
+                P.Cell0DsCoordinates.conservativeResize(3, nextPointId + 1);
+                P.Cell0DsCoordinates.col(nextPointId) = point;
+                P.Cell0DsId.push_back(nextPointId);
+                P.IdCell0Ds[nextPointId] = {point(0), point(1), point(2)};
+                row.push_back(nextPointId);
+                ++nextPointId;
+            }
+            rows.push_back(row);
+        }
+
+        // Ora crea triangoli
+        for (unsigned int i = 0; i < t_value; ++i) {
+            for (unsigned int j = 0; j < i; ++j) {
+                // triangolo in basso
+                std::vector<unsigned int> tri1 = { rows[i][j], rows[i + 1][j], rows[i + 1][j + 1] };
+                std::vector<unsigned int> tri2 = { rows[i][j], rows[i][j + 1], rows[i + 1][j + 1] };
+
+                for (auto& tri : {tri1, tri2}) {
+                    P.Cell2DsVertices.push_back(tri);
+                    P.Cell2DsId.push_back(nextFaceId++);
+
+                    std::vector<unsigned int> edgeIds;
+                    for (int k = 0; k < 3; ++k) {
+                        auto v1 = tri[k];
+                        auto v2 = tri[(k + 1) % 3];
+                        auto key = std::minmax(v1, v2);
+                        if (edgeMap.find(key) == edgeMap.end()) {
+                            edgeMap[key] = nextEdgeId++;
+                            P.Cell1DsId.push_back(edgeMap[key]);
+                        }
+                        edgeIds.push_back(edgeMap[key]);
+                    }
+                    P.Cell2DsEdges.push_back(edgeIds);
+                }
+            }
+
+            // Triangolo in alto (ultima colonna)
+            std::vector<unsigned int> tri = { rows[i][i], rows[i + 1][i], rows[i + 1][i + 1] };
+            P.Cell2DsVertices.push_back(tri);
+            P.Cell2DsId.push_back(nextFaceId++);
+
+            std::vector<unsigned int> edgeIds;
+            for (int k = 0; k < 3; ++k) {
+                auto v1 = tri[k];
+                auto v2 = tri[(k + 1) % 3];
+                auto key = std::minmax(v1, v2);
+                if (edgeMap.find(key) == edgeMap.end()) {
+                    edgeMap[key] = nextEdgeId++;
+                    P.Cell1DsId.push_back(edgeMap[key]);
+                }
+                edgeIds.push_back(edgeMap[key]);
+            }
+            P.Cell2DsEdges.push_back(edgeIds);
+        }
+    }
+
+    // Riempimento Cell1DsExtrema finale
+    P.NumCell0Ds = nextPointId;
+    P.NumCell1Ds = edgeMap.size();
+    P.NumCell2Ds = nextFaceId;
+
+    P.Cell1DsExtrema = MatrixXi(2, P.NumCell1Ds);
+    for (const auto& [key, eid] : edgeMap) {
+        P.Cell1DsExtrema(0, eid) = key.first;
+        P.Cell1DsExtrema(1, eid) = key.second;
+    }
+
+    // Aggiornamento Cell3D
+    P.Cell3DsId = {0};
+    P.Cell3DsVertices = {P.Cell0DsId};
+    P.Cell3DsEdges = {P.Cell1DsId};
+    P.Cell3DsFaces = {P.Cell2DsId};
+    P.NumCell3Ds = 1;
+
+    //return P;
+}
+}
