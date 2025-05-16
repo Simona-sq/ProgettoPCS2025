@@ -255,24 +255,21 @@ pair<vector<Vector3d>, vector<vector<unsigned int>>> getSolidData(unsigned int& 
         };
     } else if (q == 5) {
         // Icosaedro
-        double phi = (1 + sqrt(5.0)) / 2;
-        double a = 1;
-        double b = 1 / phi;
         vector<Vector3d> raw = {
-            { 0,  b, -a}, { b,  a,  0}, {-b,  a,  0},
-            { 0,  b,  a}, { 0, -b,  a}, {-a,  0,  b},
-            { 0, -b, -a}, { a,  0, -b}, { a,  0,  b},
-            {-a,  0, -b}, {-b, -a,  0}, { b, -a,  0}
+            { 0.0, 0.0, 1.175571}, { 1.051462, 0.0, 0.5257311}, {0.3249197, 1.0, 0.5257311},
+            { -0.8506508, 0.618034, 0.5257311}, {-0.8506508, -0.618034, 0.5257311}, { 0.3249197, -1.0, 0.5257311}, 
+            { 0.8506508, 0.618034, -0.5257311}, { 0.8506508, -0.618034, -0.5257311}, {-0.3249197, 1.0, -0.5257311}, 
+            {-1.051462, 0.0, -0.5257311}, {-0.3249197, -1.0, -0.5257311}, {0.0, 0.0, -1.175571}
         };
-        for (auto& v : raw) verts.push_back(normalize(v));
-        
-        faces = {
-            {0, 1, 2}, {3, 2, 1}, {3, 4, 5}, {3, 8, 4}, {0, 6, 7},
-            {0, 9, 6}, {4, 10, 11}, {6, 11, 10}, {2, 5, 9}, {11, 9, 5},
-            {1, 7, 8}, {10, 8, 7}, {3, 5, 2}, {3, 1, 8}, {0, 2, 9},
-            {0, 7, 1}, {6, 9, 11}, {6, 10, 7}, {4, 8, 10}, {4, 11, 5}
-        }; 
 
+        for (auto& v : raw) verts.push_back(normalize(v));
+
+        faces = {
+            {0, 1, 2}, {0, 2, 3}, {0, 3, 4}, {0, 4, 5}, {0, 5, 1},
+            {1, 5, 7}, {1, 7, 6}, {1, 6, 2}, {2, 6, 8}, {2, 8, 3},
+            {3, 8, 9}, {3, 9, 4}, {4, 9, 10}, {4, 10, 5}, {5, 10, 7},
+            {6, 7, 11}, {6, 11, 8}, {7, 10, 11}, {8, 11, 9}, {9, 11, 10}
+        };
     }
 
     return {verts, faces};
@@ -293,46 +290,52 @@ Polyhedron buildPlatonicSolid(unsigned int& p, unsigned int& q, unsigned int& b,
     {
         P.Cell0DsId.push_back(i);
         P.Cell0DsCoordinates.col(i) = verts[i];
-        P.IdCell0Ds[i] = {verts[i](0), verts[i](1), verts[i](2)}; //modifica
+        P.IdCell0Ds , verts , verts;
     }
     
 
-    // Creazione lati univoci
-    map<pair<unsigned int, unsigned int>, unsigned int> edgeMap;
-    map<unsigned int, std::pair<unsigned int, unsigned int>> edgeDirection;
+    // Creazione lati univoci con orientamento coerente
+    std::map<std::pair<unsigned int, unsigned int>, unsigned int> edgeMap;
     unsigned int edgeCounter = 0;
 
-    for (unsigned int fid = 0; fid < faces.size(); fid++) //modifica
+    for (unsigned int fid = 0; fid < faces.size(); fid++) 
     {
         const auto& f = faces[fid];
         P.Cell2DsId.push_back(fid);
         P.Cell2DsVertices.push_back(f);
 
-        vector<unsigned int> edgeIds;
-        for (int i = 0; i < f.size(); i++) //modifica
+        std::vector<unsigned int> edgeIds;
+        for (int i = 0; i < f.size(); ++i)
         {
             unsigned int v1 = f[i];
             unsigned int v2 = f[(i + 1) % f.size()];
-            auto key = minmax(v1, v2);
-            if (edgeMap.find(key) == edgeMap.end()) 
-            {
-                //edgeMap[key] = edgeCounter++;
-                //P.Cell1DsId.push_back(edgeMap[key]);
+            std::pair<unsigned int, unsigned int> key = {v1, v2};
+            std::pair<unsigned int, unsigned int> revKey = {v2, v1};
 
+            if (edgeMap.find(key) == edgeMap.end() && edgeMap.find(revKey) == edgeMap.end()) 
+            {
                 edgeMap[key] = edgeCounter;
                 P.Cell1DsId.push_back(edgeCounter);
-                edgeDirection[edgeCounter] = {v1, v2}; 
                 edgeCounter++;
             }
-            edgeIds.push_back(edgeMap[key]);
+
+            if (edgeMap.find(key) != edgeMap.end()) 
+            {
+                edgeIds.push_back(edgeMap[key]);
+            } 
+            else 
+            {
+                edgeIds.push_back(edgeMap[revKey]);
+            }
         }
         P.Cell2DsEdges.push_back(edgeIds);
     }
 
-    // Riempimento Cell1Ds
+    // Riempimento Cell1Ds coerente con chiave usata
     P.NumCell1Ds = edgeMap.size();
     P.Cell1DsExtrema = MatrixXi(2, P.NumCell1Ds);
-    for (const auto& [key, eid] : edgeMap) {
+    for (const auto& [key, eid] : edgeMap) 
+    {
         P.Cell1DsExtrema(0, eid) = key.first;
         P.Cell1DsExtrema(1, eid) = key.second;
     }
@@ -347,5 +350,7 @@ Polyhedron buildPlatonicSolid(unsigned int& p, unsigned int& q, unsigned int& b,
 
     return P;
 }
-
 }
+
+// ***************************************************************************
+// Funzione per la triangolazione

@@ -1,4 +1,13 @@
 #include <iostream>
+
+#include <Eigen/Dense>
+#include <vector>
+#include <map>
+#include <set>
+#include <tuple>
+#include <cmath>
+#include <algorithm>
+
 #include "Polyhedron.hpp"
 #include "Utils.hpp"
 #include "UCDUtilities.hpp"
@@ -17,14 +26,16 @@ int main(int argc, char* argv[])
 	unsigned int v2 = 0;
 	
 	// controllo che il tipo dei valori inseriti sia int
-	if (argc == 5) {
+	if (argc == 5) 
+	{
 		p = stoi(argv[1]);  //commenta stoi
 		q = stoi(argv[2]);
 		b = stoi(argv[3]);
 		c = stoi(argv[4]);
 		cout << "Input ricevuto: p=" << p << ", q=" << q << ", b=" << b << ", c=" << c << "\n";
     }
-	else if (argc == 7) {
+	else if (argc == 7) 
+	{
 		p = stoi(argv[1]);
 		q = stoi(argv[2]);
 		b = stoi(argv[3]);
@@ -40,63 +51,60 @@ int main(int argc, char* argv[])
 	}
 
 	// controllo le condizioni su p e q
-	if (p < 3 || q < 3 || double (1.0/p)+double (1.0/q) <= 0.5){
+	if (p < 3 || q < 3 || double (1.0/p)+double (1.0/q) <= 0.5)
+	{
 		cerr << "Errore: i parametri p e q non rispettano le condizioni dei poligoni platonici.\n";
     	return 1;
 	}
 
 	// controllo delle classi di triangolazione valide
-	if (b != c && b!= 0 && c!= 0){
+	if (b != c && b!= 0 && c!= 0)
+	{
 		cerr << "Errore: classe non trattata.\n";
 		return 1;
 	}
 
-
-	auto [verts, faces] = getSolidData(q);
-	Polyhedron mesh = buildPlatonicSolid(p, q, b, c);
-
-	// stampa vertici
-	std::cout << "Vertici:\n";
-	for (size_t i = 0; i < verts.size(); ++i) 
+	// Creo il solido platonico e riempo la struct
+	if (p == 3)
 	{
-		const auto& v = verts[i];
-		std::cout << "v" << i << ": (" 
-				<< v(0) << ", " 
-				<< v(1) << ", " 
-				<< v(2) << ")\n";
+		auto [verts, faces] = getSolidData(q);
+		Polyhedron mesh = buildPlatonicSolid(p, q, b, c);
+	
+		Gedim::UCDUtilities utilities;
+			{
+				utilities.ExportPoints("./Cell0Ds.inp",
+									mesh.Cell0DsCoordinates);
+			}
+
+			{
+				utilities.ExportSegments("./Cell1Ds.inp",
+										mesh.Cell0DsCoordinates,
+										mesh.Cell1DsExtrema);
+			}
+
+		if (b != c) //TRINAGOLAZIONE DI CLASSE I
+		{
+			cout<<"triangolazione di classe I"<<endl;
+			unsigned int t_value = b + c; //valore che mi indica in quante parti dividere ogni lato del triangolo
+		}
+
+		else //TRINAGOLAZIONE DI CLASSE II
+		{
+			cout<<"triangolazione di classe II"<<endl;
+		}
+
 	}
 
-	// stampa facce
-	std::cout << "Facce:\n";
-	for (size_t i = 0; i < faces.size(); ++i) {
-		std::cout << "f" << i << ": ";
-		for (unsigned int vid : faces[i]) {
-			std::cout << vid << " ";
-		}
-		std::cout << "\n";
-	}
-        
-	Gedim::UCDUtilities utilities;
-		{
-			utilities.ExportPoints("./Cell0Ds.inp",
-								mesh.Cell0DsCoordinates);
-		}
+	else if (p == 4)  //CASO CUBO (DUALE DELL'OTTAEDRO)
+		{cout<<"p = 4"<<endl;}
 
-		{
-			utilities.ExportSegments("./Cell1Ds.inp",
-									mesh.Cell0DsCoordinates,
-									mesh.Cell1DsExtrema);
-		}
+	else if (p == 5)  //CASO DODECAEDRO (DUALE DELL'ICOSAEDRO)
+		{cout<<"p = 5"<<endl;}
 
 
-	//stampa id
-	for (unsigned int i = 0; i < mesh.NumCell0Ds; ++i) 
-	{
-        std::cout << "ID " << i << " : "
-                  << mesh.Cell0DsCoordinates(0, i) << " "
-                  << mesh.Cell0DsCoordinates(1, i) << " "
-                  << mesh.Cell0DsCoordinates(2, i) << "\n";
-    }
-		
 	return 0;
+
 }
+		
+	
+
