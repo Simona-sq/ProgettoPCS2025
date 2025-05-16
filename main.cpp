@@ -50,8 +50,7 @@ int main(int argc, char* argv[])
 		cerr << "Errore: classe non trattata.\n";
 		return 1;
 	}
-
-
+	
 	// Funzione di normalizzazione 
 	Vector3d normalize(Vector3d v) {
 		return v.normalized(); // vettore normalizzato
