@@ -265,12 +265,14 @@ pair<vector<Vector3d>, vector<vector<unsigned int>>> getSolidData(unsigned int& 
             {-a,  0, -b}, {-b, -a,  0}, { b, -a,  0}
         };
         for (auto& v : raw) verts.push_back(normalize(v));
+        
         faces = {
             {0, 1, 2}, {3, 2, 1}, {3, 4, 5}, {3, 8, 4}, {0, 6, 7},
             {0, 9, 6}, {4, 10, 11}, {6, 11, 10}, {2, 5, 9}, {11, 9, 5},
             {1, 7, 8}, {10, 8, 7}, {3, 5, 2}, {3, 1, 8}, {0, 2, 9},
             {0, 7, 1}, {6, 9, 11}, {6, 10, 7}, {4, 8, 10}, {4, 11, 5}
-        };
+        }; 
+
     }
 
     return {verts, faces};
@@ -291,27 +293,36 @@ Polyhedron buildPlatonicSolid(unsigned int& p, unsigned int& q, unsigned int& b,
     {
         P.Cell0DsId.push_back(i);
         P.Cell0DsCoordinates.col(i) = verts[i];
-        P.IdCell0Ds , verts , verts; 
+        P.IdCell0Ds[i] = {verts[i](0), verts[i](1), verts[i](2)}; //modifica
     }
     
 
     // Creazione lati univoci
     map<pair<unsigned int, unsigned int>, unsigned int> edgeMap;
+    map<unsigned int, std::pair<unsigned int, unsigned int>> edgeDirection;
     unsigned int edgeCounter = 0;
 
-    for (unsigned int fid = 0; fid < faces.size(); ++fid) {
+    for (unsigned int fid = 0; fid < faces.size(); fid++) //modifica
+    {
         const auto& f = faces[fid];
         P.Cell2DsId.push_back(fid);
         P.Cell2DsVertices.push_back(f);
 
         vector<unsigned int> edgeIds;
-        for (int i = 0; i < f.size(); ++i) {
+        for (int i = 0; i < f.size(); i++) //modifica
+        {
             unsigned int v1 = f[i];
             unsigned int v2 = f[(i + 1) % f.size()];
             auto key = minmax(v1, v2);
-            if (edgeMap.find(key) == edgeMap.end()) {
-                edgeMap[key] = edgeCounter++;
-                P.Cell1DsId.push_back(edgeMap[key]);
+            if (edgeMap.find(key) == edgeMap.end()) 
+            {
+                //edgeMap[key] = edgeCounter++;
+                //P.Cell1DsId.push_back(edgeMap[key]);
+
+                edgeMap[key] = edgeCounter;
+                P.Cell1DsId.push_back(edgeCounter);
+                edgeDirection[edgeCounter] = {v1, v2}; 
+                edgeCounter++;
             }
             edgeIds.push_back(edgeMap[key]);
         }

@@ -75,6 +75,28 @@ int main(int argc, char* argv[])
 		}
 		std::cout << "\n";
 	}
+        
+	Gedim::UCDUtilities utilities;
+		{
+			utilities.ExportPoints("./Cell0Ds.inp",
+								mesh.Cell0DsCoordinates);
+		}
 
+		{
+			utilities.ExportSegments("./Cell1Ds.inp",
+									mesh.Cell0DsCoordinates,
+									mesh.Cell1DsExtrema);
+		}
+
+
+	//stampa id
+	for (unsigned int i = 0; i < mesh.NumCell0Ds; ++i) 
+	{
+        std::cout << "ID " << i << " : "
+                  << mesh.Cell0DsCoordinates(0, i) << " "
+                  << mesh.Cell0DsCoordinates(1, i) << " "
+                  << mesh.Cell0DsCoordinates(2, i) << "\n";
+    }
+		
 	return 0;
 }
