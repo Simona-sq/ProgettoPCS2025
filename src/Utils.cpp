@@ -149,10 +149,12 @@ Polyhedron buildPlatonicSolid(unsigned int& q)
 
 // ***************************************************************************
 // Funzione per la triangolazione
-void triangulateClass1(PolyhedronLibrary::Polyhedron& P, unsigned int& t_value)
+Polyhedron triangulateClass1(PolyhedronLibrary::Polyhedron& P, unsigned int& t_value)
 {
     using namespace Eigen;
 
+    Polyhedron P_triangolato; 
+    
     // Copia dei dati iniziali
     unsigned int nextPointId = P.NumCell0Ds; // nextPointId è inizializzata con il numero inizale di vertici
     unsigned int nextEdgeId = P.NumCell1Ds;
@@ -202,10 +204,18 @@ void triangulateClass1(PolyhedronLibrary::Polyhedron& P, unsigned int& t_value)
                 point = point.normalized(); // proiezione dei vertici sulla sfera con la normalizzazione
                 // Verifica duplicati 
                 
-                P.Cell0DsCoordinates.conservativeResize(3, nextPointId + 1); // inizializza nella matrice Cell0DsCoordinates una nuova colonna per le coordinate del nuovo punto
-                P.Cell0DsCoordinates.col(nextPointId) = point; // inserisce il punto nella colonna 
-                P.Cell0DsId.push_back(nextPointId); // inserisce l'id del nuovo punto
-                P.IdCell0Ds[nextPointId] = {point(0), point(1), point(2)};
+                P_triangolato.NumCell0Ds = P.NumCell0Ds;
+                P_triangolato.Cell0DsId = P.Cell0DsId;
+                P_triangolato.Cell0DsCoordinates = P.Cell0DsCoordinates;
+                P_triangolato.IdCell0Ds = P.IdCell0Ds;
+
+
+
+
+                P_triangolato.Cell0DsCoordinates.conservativeResize(3, nextPointId + 1); // inizializza nella matrice Cell0DsCoordinates una nuova colonna per le coordinate del nuovo punto
+                P_triangolato.Cell0DsCoordinates.col(nextPointId) = point; // inserisce il punto nella colonna 
+                P_triangolato.Cell0DsId.push_back(nextPointId); // inserisce l'id del nuovo punto
+                P_triangolato.IdCell0Ds[nextPointId] = {point(0), point(1), point(2)};
                 row.push_back(nextPointId);
                 ++nextPointId;
             }
@@ -221,8 +231,8 @@ void triangulateClass1(PolyhedronLibrary::Polyhedron& P, unsigned int& t_value)
                 vector<unsigned int> tri2 = { rows[i][j], rows[i][j + 1], rows[i + 1][j + 1] };
 
                 for (auto& tri : {tri1, tri2}) {
-                    P.Cell2DsVertices.push_back(tri);
-                    P.Cell2DsId.push_back(nextFaceId++);
+                    P_triangolato.Cell2DsVertices.push_back(tri);
+                    P_triangolato.Cell2DsId.push_back(nextFaceId++);
 
                     vector<unsigned int> edgeIds; //lista degli id dei lati del triangolo corrente
                     for (int k = 0; k < 3; ++k) { // itera su igni vertice del triangolo corrente
@@ -231,18 +241,18 @@ void triangulateClass1(PolyhedronLibrary::Polyhedron& P, unsigned int& t_value)
                         auto key = minmax(v1, v2); // ordina la coppia per evitare duplicati
                         if (edgeMap.find(key) == edgeMap.end()) {
                             edgeMap[key] = nextEdgeId++;
-                            P.Cell1DsId.push_back(edgeMap[key]); // aggiunge l'id del nuovo lato a Cell1DsId
+                            P_triangolato.Cell1DsId.push_back(edgeMap[key]); // aggiunge l'id del nuovo lato a Cell1DsId
                         }
                         edgeIds.push_back(edgeMap[key]);
                     }
-                    P.Cell2DsEdges.push_back(edgeIds);
+                    P_triangolato.Cell2DsEdges.push_back(edgeIds);
                 }
             }
 
             // triangolazione del triangolo in cima
             vector<unsigned int> tri = { rows[i][i], rows[i + 1][i], rows[i + 1][i + 1] };
-            P.Cell2DsVertices.push_back(tri);
-            P.Cell2DsId.push_back(nextFaceId++);
+            P_triangolato.Cell2DsVertices.push_back(tri);
+            P_triangolato.Cell2DsId.push_back(nextFaceId++);
 
             vector<unsigned int> edgeIds;
             for (int k = 0; k < 3; ++k) {
@@ -251,33 +261,38 @@ void triangulateClass1(PolyhedronLibrary::Polyhedron& P, unsigned int& t_value)
                 auto key = minmax(v1, v2);
                 if (edgeMap.find(key) == edgeMap.end()) {
                     edgeMap[key] = nextEdgeId++;
-                    P.Cell1DsId.push_back(edgeMap[key]);
+                    P_triangolato.Cell1DsId.push_back(edgeMap[key]);
                 }
                 edgeIds.push_back(edgeMap[key]);
             }
-            P.Cell2DsEdges.push_back(edgeIds);
+            P_triangolato.Cell2DsEdges.push_back(edgeIds);
         }
     }
 
     // Aggiorniamo gli attributi del poliedro
-    P.NumCell0Ds = nextPointId;
-    P.NumCell1Ds = edgeMap.size();
-    P.NumCell2Ds = nextFaceId;
+    P_triangolato.NumCell0Ds = nextPointId;
+    P_triangolato.NumCell1Ds = edgeMap.size();
+    P_triangolato.NumCell2Ds = nextFaceId;
 
-    P.Cell1DsExtrema = MatrixXi(2, P.NumCell1Ds);
+    P_triangolato.Cell1DsExtrema = MatrixXi(2, P_triangolato.NumCell1Ds);
     // viene riempita la matrice Cell1DsExtrema con i valori aggiornati di edgeMap
     for (const auto& [key, eid] : edgeMap) {
-        P.Cell1DsExtrema(0, eid) = key.first;
-        P.Cell1DsExtrema(1, eid) = key.second;
+        P_triangolato.Cell1DsExtrema(0, eid) = key.first;
+        P_triangolato.Cell1DsExtrema(1, eid) = key.second;
     }
 
     // Aggiornamento Cell3D
-    P.Cell3DsId = {0};
-    P.Cell3DsVertices = {P.Cell0DsId};
-    P.Cell3DsEdges = {P.Cell1DsId};
-    P.Cell3DsFaces = {P.Cell2DsId};
-    P.NumCell3Ds = 1;
+    P_triangolato.Cell3DsId = {0};
+    P_triangolato.Cell3DsVertices = {P_triangolato.Cell0DsId};
+    P_triangolato.Cell3DsEdges = {P_triangolato.Cell1DsId};
+    P_triangolato.Cell3DsFaces = {P_triangolato.Cell2DsId};
+    P_triangolato.NumCell3Ds = 1;
+
+
+    return P_triangolato;
+
 }
+
 
 
 }

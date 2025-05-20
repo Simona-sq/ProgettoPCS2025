@@ -76,18 +76,53 @@ int main(int argc, char* argv[])
 		{
 			cout<<"triangolazione di classe I"<<endl;
 			unsigned int t_value = b + c; //valore che mi indica in quante parti dividere ogni lato del triangolo
-			triangulateClass1(mesh, t_value); //triangolazione di classe 1 con parametro t_value
+			Polyhedron mesh_triangolata = triangulateClass1(mesh, t_value); //triangolazione di classe 1 con parametro t_value
+
+
+
+			std::cout << "Cell0DsId: [ ";
+			for (unsigned int val : mesh_triangolata.Cell0DsId) {
+				std::cout << val << " ";
+			}
+			std::cout << "]" << std::endl;
+
+
+
+			
+			for (const auto& [id, coord] : mesh.IdCell0Ds) {
+				std::cout << "Vertice " << id << ": (";
+				for (size_t j = 0; j < coord.size(); ++j) {
+					std::cout << coord[j];
+					if (j < coord.size() - 1) std::cout << ", ";
+				}
+				std::cout << ")\n";
+			}
+
+
+			for (const auto& [id, coord] : mesh_triangolata.IdCell0Ds) {
+				std::cout << "Vertice " << id << ": (";
+				for (size_t j = 0; j < coord.size(); ++j) {
+					std::cout << coord[j];
+					if (j < coord.size() - 1) std::cout << ", ";
+				}
+				std::cout << ")\n";
+			}
+
+
+
+
+
 
 		Gedim::UCDUtilities utilities;
 			{
 				utilities.ExportPoints("./Cell0Ds_T.inp",
-									mesh.Cell0DsCoordinates);
+									mesh_triangolata.Cell0DsCoordinates);
 			}
 
 			{
 				utilities.ExportSegments("./Cell1Ds_T.inp",
-										mesh.Cell0DsCoordinates,
-										mesh.Cell1DsExtrema);
+										mesh_triangolata.Cell0DsCoordinates,
+										mesh_triangolata.Cell1DsExtrema);
 			}
 		}
 

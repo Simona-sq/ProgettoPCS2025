@@ -32,7 +32,7 @@ pair<vector<Vector3d>, vector<vector<unsigned int>>> getSolidData(unsigned int& 
 
 Polyhedron buildPlatonicSolid(unsigned int& q);
 
-void triangulateClass1(PolyhedronLibrary::Polyhedron& P, unsigned int& t_value);
+Polyhedron triangulateClass1(PolyhedronLibrary::Polyhedron& P, unsigned int& t_value);
 
 
 }
