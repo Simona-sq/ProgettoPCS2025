@@ -79,40 +79,6 @@ int main(int argc, char* argv[])
 			Polyhedron mesh_triangolata = triangulateClass1(mesh, t_value); //triangolazione di classe 1 con parametro t_value
 
 
-
-			std::cout << "Cell0DsId: [ ";
-			for (unsigned int val : mesh_triangolata.Cell0DsId) {
-				std::cout << val << " ";
-			}
-			std::cout << "]" << std::endl;
-
-
-
-			
-			for (const auto& [id, coord] : mesh.IdCell0Ds) {
-				std::cout << "Vertice " << id << ": (";
-				for (size_t j = 0; j < coord.size(); ++j) {
-					std::cout << coord[j];
-					if (j < coord.size() - 1) std::cout << ", ";
-				}
-				std::cout << ")\n";
-			}
-
-
-			for (const auto& [id, coord] : mesh_triangolata.IdCell0Ds) {
-				std::cout << "Vertice " << id << ": (";
-				for (size_t j = 0; j < coord.size(); ++j) {
-					std::cout << coord[j];
-					if (j < coord.size() - 1) std::cout << ", ";
-				}
-				std::cout << ")\n";
-			}
-
-
-
-
-
-
 		Gedim::UCDUtilities utilities;
 			{
 				utilities.ExportPoints("./Cell0Ds_T.inp",
@@ -130,8 +96,6 @@ int main(int argc, char* argv[])
 		{
 			cout<<"triangolazione di classe II"<<endl;
 		}
-
-
 	}
 
 	else if (p == 4)  //CASO CUBO (DUALE DELL'OTTAEDRO)
@@ -139,7 +103,6 @@ int main(int argc, char* argv[])
 
 	else if (p == 5)  //CASO DODECAEDRO (DUALE DELL'ICOSAEDRO)
 		{cout<<"p = 5"<<endl;}
-
 
 	return 0;
 

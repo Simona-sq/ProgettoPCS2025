@@ -152,28 +152,18 @@ Polyhedron buildPlatonicSolid(unsigned int& q)
 Polyhedron triangulateClass1(PolyhedronLibrary::Polyhedron& P, unsigned int& t_value)
 {
     using namespace Eigen;
-
-    Polyhedron P_triangolato; 
+    Polyhedron P_triangolato;
     
     // Copia dei dati iniziali
-    unsigned int nextPointId = P.NumCell0Ds; // nextPointId è inizializzata con il numero inizale di vertici
-    unsigned int nextEdgeId = P.NumCell1Ds;
-    unsigned int nextFaceId = P.NumCell2Ds;
-
+    unsigned int nextPointId = 0; // nextPointId è inizializzata con il numero inizale di vertici
+    unsigned int nextEdgeId = 0;
+    unsigned int nextFaceId = 0;
 
     map<pair<unsigned int, unsigned int>, unsigned int> edgeMap; // mappa che tiene traccia dei lati già esistenti evitando duplicati
 
     // LATI
-    // Prepara i vecchi lati nel map per evitare duplicati
-    for (unsigned int eid = 0; eid < P.NumCell1Ds; ++eid) {
-        auto v1 = P.Cell1DsExtrema(0, eid); // vertice di inizio del lato 
-        auto v2 = P.Cell1DsExtrema(1, eid); // vertice di fine del lato 
-        auto key = minmax(v1, v2); // minmax(v1,v2) ordina v1 e v2 in ordine cresceste per non contare due volte lo stesso lato
-        edgeMap[key] = eid; // inserisce la coppia ordinata (v1,v2) come chiave della mappa e l'id del lato come valore
-    }
-
-
     vector<vector<unsigned int>> originalFaces = P.Cell2DsVertices;
+    map<tuple<double, double, double>, unsigned int> pointMap;
     // per ogni faccia salvo gli id vertici A B C
     for (size_t fid = 0; fid < originalFaces.size(); ++fid) 
     {
@@ -188,58 +178,69 @@ Polyhedron triangulateClass1(PolyhedronLibrary::Polyhedron& P, unsigned int& t_v
         Vector3d vB = P.Cell0DsCoordinates.col(B);
         Vector3d vC = P.Cell0DsCoordinates.col(C);
 
-
         vector<vector<unsigned int>> rows;
 
         // Costruisci i punti interni con interpolazione baricentrica
-        for (unsigned int i = 0; i < t_value+1; ++i) { // ogni iterazione rappresenta una riga di punti nel triangolo
+        for (unsigned int i = 0; i < t_value+1; ++i) 
+        { // ogni iterazione rappresenta una riga di punti nel triangolo
             vector<unsigned int> row; // contiene gli id dei punti generati in quella riga
             // ogni iterazione rappresenta un punto sulla riga
-            for (unsigned int j = 0; j <= i; ++j) { 
+            for (unsigned int j = 0; j <= i; ++j) 
+            { 
                 // trovo i parametri per dividere il lato i t_value parti
                 double alpha = double(t_value - i) / t_value; 
                 double beta  = double(i - j) / t_value;
                 double gamma = double(j) / t_value;
                 Vector3d point = alpha * vA + beta * vB + gamma * vC; // coordinate del nuovo punto
                 point = point.normalized(); // proiezione dei vertici sulla sfera con la normalizzazione
+
                 // Verifica duplicati 
-                
-                P_triangolato.NumCell0Ds = P.NumCell0Ds;
-                P_triangolato.Cell0DsId = P.Cell0DsId;
-                P_triangolato.Cell0DsCoordinates = P.Cell0DsCoordinates;
-                P_triangolato.IdCell0Ds = P.IdCell0Ds;
-
-
-
-
-                P_triangolato.Cell0DsCoordinates.conservativeResize(3, nextPointId + 1); // inizializza nella matrice Cell0DsCoordinates una nuova colonna per le coordinate del nuovo punto
-                P_triangolato.Cell0DsCoordinates.col(nextPointId) = point; // inserisce il punto nella colonna 
-                P_triangolato.Cell0DsId.push_back(nextPointId); // inserisce l'id del nuovo punto
-                P_triangolato.IdCell0Ds[nextPointId] = {point(0), point(1), point(2)};
-                row.push_back(nextPointId);
-                ++nextPointId;
+                auto key = make_tuple(point(0), point(1), point(2));
+                auto it = pointMap.find(key);
+                if (it != pointMap.end()) 
+                {
+                    // Punto già esistente
+                    row.push_back(it->second);
+                } 
+                else {
+                    // Nuovo punto
+                    P_triangolato.Cell0DsCoordinates.conservativeResize(3, nextPointId + 1);
+                    P_triangolato.Cell0DsCoordinates.col(nextPointId) = point;
+                    P_triangolato.Cell0DsId.push_back(nextPointId);
+                    P_triangolato.IdCell0Ds[nextPointId] = {point(0), point(1), point(2)};
+                    row.push_back(nextPointId);
+                    pointMap[key] = nextPointId;
+                    ++nextPointId;
+                }  
             }
             rows.push_back(row);
         }
 
         // Ora crea triangoli
-        for (unsigned int i = 0; i < t_value; ++i) { //ogni iterazione rappresenta una riga di triangoli che verranno creati
-            for (unsigned int j = 0; j < i; ++j) { //ogni iteriazione rappresenta un triangolo che verrà creato nella riga corrente
+        for (unsigned int i = 0; i < t_value; ++i) 
+        { //ogni iterazione rappresenta una riga di triangoli che verranno creati
+            for (unsigned int j = 0; j < i; ++j) 
+            { //ogni iterazione rappresenta un triangolo che verrà creato nella riga corrente
 
                 // triangolazione di tutta la faccia tranne il triangolo in cima, a partire dalla linea con due punti
                 vector<unsigned int> tri1 = { rows[i][j], rows[i + 1][j], rows[i + 1][j + 1] };
                 vector<unsigned int> tri2 = { rows[i][j], rows[i][j + 1], rows[i + 1][j + 1] };
 
-                for (auto& tri : {tri1, tri2}) {
+                for (auto& tri : {tri1, tri2}) 
+                {
                     P_triangolato.Cell2DsVertices.push_back(tri);
                     P_triangolato.Cell2DsId.push_back(nextFaceId++);
 
                     vector<unsigned int> edgeIds; //lista degli id dei lati del triangolo corrente
-                    for (int k = 0; k < 3; ++k) { // itera su igni vertice del triangolo corrente
+                    for (int k = 0; k < 3; ++k) 
+
+                    
+                    { // itera su igni vertice del triangolo corrente
                         auto v1 = tri[k]; // vertice corrente
                         auto v2 = tri[(k + 1) % 3]; // vertice successivo + condizione per la chiusura del tiangolo
                         auto key = minmax(v1, v2); // ordina la coppia per evitare duplicati
-                        if (edgeMap.find(key) == edgeMap.end()) {
+                        if (edgeMap.find(key) == edgeMap.end()) 
+                        {
                             edgeMap[key] = nextEdgeId++;
                             P_triangolato.Cell1DsId.push_back(edgeMap[key]); // aggiunge l'id del nuovo lato a Cell1DsId
                         }
@@ -276,7 +277,8 @@ Polyhedron triangulateClass1(PolyhedronLibrary::Polyhedron& P, unsigned int& t_v
 
     P_triangolato.Cell1DsExtrema = MatrixXi(2, P_triangolato.NumCell1Ds);
     // viene riempita la matrice Cell1DsExtrema con i valori aggiornati di edgeMap
-    for (const auto& [key, eid] : edgeMap) {
+    for (const auto& [key, eid] : edgeMap) 
+    {
         P_triangolato.Cell1DsExtrema(0, eid) = key.first;
         P_triangolato.Cell1DsExtrema(1, eid) = key.second;
     }
@@ -288,11 +290,6 @@ Polyhedron triangulateClass1(PolyhedronLibrary::Polyhedron& P, unsigned int& t_v
     P_triangolato.Cell3DsFaces = {P_triangolato.Cell2DsId};
     P_triangolato.NumCell3Ds = 1;
 
-
     return P_triangolato;
-
 }
-
-
-
 }
