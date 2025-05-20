@@ -12,13 +12,6 @@ namespace PolyhedronLibrary
 {
 
 // ***************************************************************************
-// Funzione di normalizzazione 
-Vector3d normalizza(Vector3d v) 
-{
-    return v.normalized(); // vettore normalizzato
-}
-
-// ***************************************************************************
 // Definisco i vertici e le facce del solido platonico di partenza
 pair<vector<Vector3d>, vector<vector<unsigned int>>> getSolidData(unsigned int& q) 
 {
@@ -33,7 +26,7 @@ pair<vector<Vector3d>, vector<vector<unsigned int>>> getSolidData(unsigned int& 
             {-sqrt(2.0/3.0), sqrt(2.0), -1.0/sqrt(3)},
             {-sqrt(2.0/3.0), -sqrt(2.0), -1.0/sqrt(3)}
         };
-        for (auto& v : verts) v = normalizza(v);
+        for (auto& v : verts) v = v.normalized();
         faces = {
             {0, 1, 2},
             {0, 2, 3},
@@ -47,7 +40,7 @@ pair<vector<Vector3d>, vector<vector<unsigned int>>> getSolidData(unsigned int& 
             {0, 1, 0}, {0, -1, 0},
             {0, 0, 1}, {0, 0, -1}
         };
-        for (auto& v : verts) v = normalizza(v);
+        for (auto& v : verts) v = v.normalized();
         faces = {
             {0, 4, 2}, {2, 4, 1}, {1, 4, 3}, {3, 4, 0},
             {0, 2, 5}, {2, 1, 5}, {1, 3, 5}, {3, 0, 5}
@@ -61,7 +54,7 @@ pair<vector<Vector3d>, vector<vector<unsigned int>>> getSolidData(unsigned int& 
             {-1.051462, 0.0, -0.5257311}, {-0.3249197, -1.0, -0.5257311}, {0.0, 0.0, -1.175571}
         };
 
-        for (auto& v : raw) verts.push_back(normalizza(v));
+        for (auto& v : raw) verts.push_back(v.normalized());
 
         faces = {
             {0, 1, 2}, {0, 2, 3}, {0, 3, 4}, {0, 4, 5}, {0, 5, 1},
@@ -89,7 +82,10 @@ Polyhedron buildPlatonicSolid(unsigned int& q)
     {
         P.Cell0DsId.push_back(i);
         P.Cell0DsCoordinates.col(i) = verts[i];
-        P.IdCell0Ds , verts , verts; // RIVEDERE !!!
+
+        const Vector3d v = verts[i];
+        vector<double> coords = {v(0), v(1), v(2)};
+        P.IdCell0Ds[i] = coords; 
     }
     
 
@@ -104,7 +100,7 @@ Polyhedron buildPlatonicSolid(unsigned int& q)
         P.Cell2DsVertices.push_back(f);
 
         std::vector<unsigned int> edgeIds;
-        for (int i = 0; i < f.size(); ++i)
+        for (unsigned int i = 0; i < f.size(); ++i)
         {
             unsigned int v1 = f[i];
             unsigned int v2 = f[(i + 1) % f.size()];
@@ -155,55 +151,60 @@ Polyhedron buildPlatonicSolid(unsigned int& q)
 // Funzione per la triangolazione
 void triangulateClass1(PolyhedronLibrary::Polyhedron& P, unsigned int& t_value)
 {
-    cout << "inizio triangolazone" << endl;
     using namespace Eigen;
 
     // Copia dei dati iniziali
-    unsigned int nextPointId = P.NumCell0Ds;
+    unsigned int nextPointId = P.NumCell0Ds; // nextPointId è inizializzata con il numero inizale di vertici
     unsigned int nextEdgeId = P.NumCell1Ds;
     unsigned int nextFaceId = P.NumCell2Ds;
 
-    map<pair<unsigned int, unsigned int>, unsigned int> edgeMap;
 
+    map<pair<unsigned int, unsigned int>, unsigned int> edgeMap; // mappa che tiene traccia dei lati già esistenti evitando duplicati
+
+    // LATI
     // Prepara i vecchi lati nel map per evitare duplicati
     for (unsigned int eid = 0; eid < P.NumCell1Ds; ++eid) {
-        cout << "triangolazione del lato" << eid << endl;
-        auto v1 = P.Cell1DsExtrema(0, eid);
-        auto v2 = P.Cell1DsExtrema(1, eid);
+        auto v1 = P.Cell1DsExtrema(0, eid); // vertice di inizio del lato 
+        auto v2 = P.Cell1DsExtrema(1, eid); // vertice di fine del lato 
         auto key = minmax(v1, v2); // minmax(v1,v2) ordina v1 e v2 in ordine cresceste per non contare due volte lo stesso lato
-        edgeMap[key] = eid;
+        edgeMap[key] = eid; // inserisce la coppia ordinata (v1,v2) come chiave della mappa e l'id del lato come valore
     }
-    cout << P.Cell2DsVertices.size()<< endl;
+
 
     vector<vector<unsigned int>> originalFaces = P.Cell2DsVertices;
+    // per ogni faccia salvo gli id vertici A B C
     for (size_t fid = 0; fid < originalFaces.size(); ++fid) 
     {
-        cout << "triangolazione della faccia" << fid << endl;
         const auto& face = P.Cell2DsVertices[fid];
 
-        unsigned int A = face[0];
+        unsigned int A = face[0]; 
         unsigned int B = face[1];
         unsigned int C = face[2];
 
+        // salvo le tre coordinate di ogni vertice
         Vector3d vA = P.Cell0DsCoordinates.col(A);
         Vector3d vB = P.Cell0DsCoordinates.col(B);
         Vector3d vC = P.Cell0DsCoordinates.col(C);
 
+
         vector<vector<unsigned int>> rows;
 
         // Costruisci i punti interni con interpolazione baricentrica
-        for (unsigned int i = 0; i <= t_value; ++i) {
-            vector<unsigned int> row;
-            for (unsigned int j = 0; j <= i; ++j) {
-                double alpha = double(t_value - i) / t_value;
+        for (unsigned int i = 0; i < t_value+1; ++i) { // ogni iterazione rappresenta una riga di punti nel triangolo
+            vector<unsigned int> row; // contiene gli id dei punti generati in quella riga
+            // ogni iterazione rappresenta un punto sulla riga
+            for (unsigned int j = 0; j <= i; ++j) { 
+                // trovo i parametri per dividere il lato i t_value parti
+                double alpha = double(t_value - i) / t_value; 
                 double beta  = double(i - j) / t_value;
                 double gamma = double(j) / t_value;
-                Vector3d point = alpha * vA + beta * vB + gamma * vC;
-
-                // Verifica duplicati (facoltativo)
-                P.Cell0DsCoordinates.conservativeResize(3, nextPointId + 1);
-                P.Cell0DsCoordinates.col(nextPointId) = point;
-                P.Cell0DsId.push_back(nextPointId);
+                Vector3d point = alpha * vA + beta * vB + gamma * vC; // coordinate del nuovo punto
+                point = point.normalized(); // proiezione dei vertici sulla sfera con la normalizzazione
+                // Verifica duplicati 
+                
+                P.Cell0DsCoordinates.conservativeResize(3, nextPointId + 1); // inizializza nella matrice Cell0DsCoordinates una nuova colonna per le coordinate del nuovo punto
+                P.Cell0DsCoordinates.col(nextPointId) = point; // inserisce il punto nella colonna 
+                P.Cell0DsId.push_back(nextPointId); // inserisce l'id del nuovo punto
                 P.IdCell0Ds[nextPointId] = {point(0), point(1), point(2)};
                 row.push_back(nextPointId);
                 ++nextPointId;
@@ -212,9 +213,10 @@ void triangulateClass1(PolyhedronLibrary::Polyhedron& P, unsigned int& t_value)
         }
 
         // Ora crea triangoli
-        for (unsigned int i = 0; i < t_value; ++i) {
-            for (unsigned int j = 0; j < i; ++j) {
-                // triangolo in basso
+        for (unsigned int i = 0; i < t_value; ++i) { //ogni iterazione rappresenta una riga di triangoli che verranno creati
+            for (unsigned int j = 0; j < i; ++j) { //ogni iteriazione rappresenta un triangolo che verrà creato nella riga corrente
+
+                // triangolazione di tutta la faccia tranne il triangolo in cima, a partire dalla linea con due punti
                 vector<unsigned int> tri1 = { rows[i][j], rows[i + 1][j], rows[i + 1][j + 1] };
                 vector<unsigned int> tri2 = { rows[i][j], rows[i][j + 1], rows[i + 1][j + 1] };
 
@@ -222,14 +224,14 @@ void triangulateClass1(PolyhedronLibrary::Polyhedron& P, unsigned int& t_value)
                     P.Cell2DsVertices.push_back(tri);
                     P.Cell2DsId.push_back(nextFaceId++);
 
-                    vector<unsigned int> edgeIds;
-                    for (int k = 0; k < 3; ++k) {
-                        auto v1 = tri[k];
-                        auto v2 = tri[(k + 1) % 3];
-                        auto key = minmax(v1, v2);
+                    vector<unsigned int> edgeIds; //lista degli id dei lati del triangolo corrente
+                    for (int k = 0; k < 3; ++k) { // itera su igni vertice del triangolo corrente
+                        auto v1 = tri[k]; // vertice corrente
+                        auto v2 = tri[(k + 1) % 3]; // vertice successivo + condizione per la chiusura del tiangolo
+                        auto key = minmax(v1, v2); // ordina la coppia per evitare duplicati
                         if (edgeMap.find(key) == edgeMap.end()) {
                             edgeMap[key] = nextEdgeId++;
-                            P.Cell1DsId.push_back(edgeMap[key]);
+                            P.Cell1DsId.push_back(edgeMap[key]); // aggiunge l'id del nuovo lato a Cell1DsId
                         }
                         edgeIds.push_back(edgeMap[key]);
                     }
@@ -237,7 +239,7 @@ void triangulateClass1(PolyhedronLibrary::Polyhedron& P, unsigned int& t_value)
                 }
             }
 
-            // Triangolo in alto (ultima colonna)
+            // triangolazione del triangolo in cima
             vector<unsigned int> tri = { rows[i][i], rows[i + 1][i], rows[i + 1][i + 1] };
             P.Cell2DsVertices.push_back(tri);
             P.Cell2DsId.push_back(nextFaceId++);
@@ -256,14 +258,14 @@ void triangulateClass1(PolyhedronLibrary::Polyhedron& P, unsigned int& t_value)
             P.Cell2DsEdges.push_back(edgeIds);
         }
     }
-    cout << "triangolazione completata" << endl;
 
-    // Riempimento Cell1DsExtrema finale
+    // Aggiorniamo gli attributi del poliedro
     P.NumCell0Ds = nextPointId;
     P.NumCell1Ds = edgeMap.size();
     P.NumCell2Ds = nextFaceId;
 
     P.Cell1DsExtrema = MatrixXi(2, P.NumCell1Ds);
+    // viene riempita la matrice Cell1DsExtrema con i valori aggiornati di edgeMap
     for (const auto& [key, eid] : edgeMap) {
         P.Cell1DsExtrema(0, eid) = key.first;
         P.Cell1DsExtrema(1, eid) = key.second;
@@ -275,14 +277,7 @@ void triangulateClass1(PolyhedronLibrary::Polyhedron& P, unsigned int& t_value)
     P.Cell3DsEdges = {P.Cell1DsId};
     P.Cell3DsFaces = {P.Cell2DsId};
     P.NumCell3Ds = 1;
-
-    //return P;
 }
-
-
-
-
-
 
 
 }

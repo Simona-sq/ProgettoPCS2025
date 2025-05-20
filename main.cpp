@@ -58,7 +58,7 @@ int main(int argc, char* argv[])
 	// Creo il solido platonico e riempo la struct
 	if (p == 3)
 	{
-		Polyhedron mesh = buildPlatonicSolid(q);
+		Polyhedron mesh = buildPlatonicSolid(q); //definiamo il solido platonico di partenza
 	
 		Gedim::UCDUtilities utilities;
 			{
@@ -76,7 +76,7 @@ int main(int argc, char* argv[])
 		{
 			cout<<"triangolazione di classe I"<<endl;
 			unsigned int t_value = b + c; //valore che mi indica in quante parti dividere ogni lato del triangolo
-			triangulateClass1(mesh, t_value);
+			triangulateClass1(mesh, t_value); //triangolazione di classe 1 con parametro t_value
 
 		Gedim::UCDUtilities utilities;
 			{
