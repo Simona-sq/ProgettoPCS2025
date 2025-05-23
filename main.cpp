@@ -56,11 +56,10 @@ int main(int argc, char* argv[])
 	}
 
 	// Creo il solido platonico e riempo la struct
+	// CASO TETRAEDRO, OTTAEDRO, ICOSAEDRO
 	if (p == 3)
-	{
+	{	
 		Polyhedron mesh = buildPlatonicSolid(q); //definiamo il solido platonico di partenza
-	
-
 		// export del poliedro di partenza
 		Gedim::UCDUtilities utilities;
 			{
@@ -97,6 +96,7 @@ int main(int argc, char* argv[])
 		else //TRIANGOLAZIONE DI CLASSE II
 		{
 			cout<<"triangolazione di classe II"<<endl;
+			/*
 			Polyhedron mesh_triangolata2 = triangulateClass2(mesh, b);
 
 			// export del poliedro con triangolzione di classe 1
@@ -111,18 +111,49 @@ int main(int argc, char* argv[])
 											mesh_triangolata2.Cell0DsCoordinates,
 											mesh_triangolata2.Cell1DsExtrema);
 				}
+			*/
 		}
 	}
 
-	else if (p == 4)  //CASO CUBO (DUALE DELL'OTTAEDRO)
-		{cout<<"p = 4"<<endl;}
+	//CASO CUBO (DUALE DELL'OTTAEDRO) e CASO DODECAEDRO (DUALE DELL'ICOSAEDRO)
+	else if (p == 4 || p == 5)  
+		{
+			cout<<"p = "<< p <<endl;
+			Polyhedron mesh = buildPlatonicSolid(p); //definiamo il solido platonico di partenza
 
-	else if (p == 5)  //CASO DODECAEDRO (DUALE DELL'ICOSAEDRO)
-		{cout<<"p = 5"<<endl;}
+			if (b != c) //TRIANGOLAZIONE DI CLASSE I
+			{
+				cout<<"triangolazione di classe I"<<endl;
+				unsigned int t_value = b + c; //valore che mi indica in quante parti dividere ogni lato del triangolo
+				Polyhedron mesh_triangolata1 = triangulateClass1(mesh, t_value); //triangolazione di classe 1 con parametro t_value
+					
+				Polyhedron mesh_dualizzata = Dualize(mesh_triangolata1);
+
+				// export del poliedro con dualizzazione
+				Gedim::UCDUtilities utilities;
+					{
+						utilities.ExportPoints("./Cell0Ds_D1.inp",
+											mesh_dualizzata.Cell0DsCoordinates);
+					}
+
+					{
+						utilities.ExportSegments("./Cell1Ds_D1.inp",
+												mesh_dualizzata.Cell0DsCoordinates,
+												mesh_dualizzata.Cell1DsExtrema);
+					}
+			}
+
+			else //TRIANGOLAZIONE DI CLASSE II
+			{
+				cout<<"triangolazione di classe II"<<endl;
+			}
+		
+		}
 
 	return 0;
-
 }
+
+
 		
 	
 

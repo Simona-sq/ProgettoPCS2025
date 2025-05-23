@@ -34,13 +34,11 @@ Polyhedron buildPlatonicSolid(unsigned int& q);
 
 Polyhedron triangulateClass1(PolyhedronLibrary::Polyhedron& P, unsigned int& t_value);
 
-Polyhedron triangulateClass2(PolyhedronLibrary::Polyhedron& P, unsigned int& t_value);
+//Polyhedron triangulateClass2(PolyhedronLibrary::Polyhedron& P, unsigned int& t_value);
 
-unsigned int addPointToPolyhedron(Vector3d point,
-    Polyhedron& poly,
-    std::map<std::tuple<double, double, double>, unsigned int>& pMap,
-    unsigned int& idCounter);
+vector<unsigned int> cycled_face_for_dual(vector<unsigned int>& face_new, const Eigen::MatrixXd& coord);
 
-double roundCoord(double x);
+Polyhedron Dualize(const Polyhedron& P_original);
+
 
 }

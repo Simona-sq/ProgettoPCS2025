@@ -294,50 +294,44 @@ Polyhedron triangulateClass1(PolyhedronLibrary::Polyhedron& P, unsigned int& t_v
     return P_triangolato;
 }
 
+/*
 Polyhedron triangulateClass2(PolyhedronLibrary::Polyhedron& P, unsigned int& t_value)
 {
     using namespace Eigen;
-    Polyhedron P_triangolato;
+    Polyhedron P_triangolato1 = triangulateClass1(P, t_value); //triangolazione di classe 1
+    Polyhedron P_triangolato2; //creo nuova mesh per salvare dati della nuova traingolazione
 
     unsigned int nextPointId = 0;
     unsigned int nextEdgeId = 0;
     unsigned int nextFaceId = 0;
 
-    std::map<std::tuple<double, double, double>, unsigned int> pointMap;
-    std::map<std::pair<unsigned int, unsigned int>, unsigned int> edgeMap;
+    map<tuple<double, double, double>, unsigned int> pointMap;
+    map<pair<unsigned int, unsigned int>, unsigned int> edgeMap;
+    //unordered_set<unsigned int> midpoints_ids;
+    set<unsigned int> midpoints_ids;
 
-
-    for (const auto& face : P.Cell2DsVertices)
+    for (const auto& face : P_triangolato1.Cell2DsVertices)  //itera su ogni faccia della triangolazione di classe 1 
     {
         unsigned int A = face[0];
         unsigned int B = face[1];
         unsigned int C = face[2];
 
-        Vector3d vA = P.Cell0DsCoordinates.col(A);
-        Vector3d vB = P.Cell0DsCoordinates.col(B);
-        Vector3d vC = P.Cell0DsCoordinates.col(C);
+        Vector3d vA = P_triangolato1.Cell0DsCoordinates.col(A);
+        Vector3d vB = P_triangolato1.Cell0DsCoordinates.col(B);
+        Vector3d vC = P_triangolato1.Cell0DsCoordinates.col(C);
 
-        vector<std::vector<unsigned int>> rows;
+        Vector3d M_ab = 0.5 * (vA + vB); //punto medio AB
+        M_ab = M_ab.normalized();
+        Vector3d M_bc = 0.5 * (vB + vC);
+        M_bc = M_bc.normalized();
+        Vector3d M_ca = 0.5 * (vC + vA);
+        M_ca = M_ca.normalized();
 
-        for (unsigned int i = 0; i <= t_value; ++i)
-        {
-            double b = static_cast<double>(i) / t_value;
-            double a = 1.0 - 2.0 * b;
+        Vector3d centroid = (vA + vB + vC) / 3; //baricentro
+        centroid = centroid.normalized();
 
-            vector<unsigned int> row;
-            for (unsigned int j = 0; j <= i; ++j)
-            {
-                double gamma;
-                if (i == 0) {
-                    gamma = 0.0;
-                } else {
-                    gamma = static_cast<double>(j) / i;
-                }
-                double beta = 1.0 - gamma;
+        vector<vector<unsigned int>> rows;
 
-                Vector3d point = a * vA + b * (beta * vB + gamma * vC);
-                //point = point.nomalized();
-                
                 // Verifica duplicati 
                 auto key = make_tuple(point(0), point(1), point(2));
                 auto it = pointMap.find(key);
@@ -432,8 +426,6 @@ Polyhedron triangulateClass2(PolyhedronLibrary::Polyhedron& P, unsigned int& t_v
     P_triangolato.Cell3DsFaces = { P_triangolato.Cell2DsId };
     P_triangolato.NumCell3Ds = 1;
 
-
-
     for (const auto& [id, coords] : P_triangolato.IdCell0Ds) {
         std::cout << "ID: " << id << " -> [";
         for (size_t i = 0; i < coords.size(); ++i) {
@@ -443,53 +435,90 @@ Polyhedron triangulateClass2(PolyhedronLibrary::Polyhedron& P, unsigned int& t_v
         std::cout << "]\n";
     }
 
-
-
-
-
-
     return P_triangolato;
 }
+    */
 
+Polyhedron Dualize(const Polyhedron& P_original) 
+{
+    Polyhedron P_duale;
 
-// Funzione di aggiunta di un punto al poliedro
-unsigned int addPointToPolyhedron(Vector3d point,
-        Polyhedron& poly,
-        std::map<std::tuple<double, double, double>, unsigned int>& pMap,
-        unsigned int& idCounter)
-    {
-    //point.normalize();  // Proiezione sulla sfera
+    // 1. Ogni faccia originale diventa un vertice del duale
+    unsigned int num_faces = P_original.Cell2DsVertices.size();
+    P_duale.NumCell0Ds = num_faces;
+    P_duale.Cell0DsId.resize(num_faces);
+    P_duale.Cell0DsCoordinates.resize(3, num_faces);
 
-    std::tuple<double, double, double> key = std::make_tuple(
-    roundCoord(point(0)), roundCoord(point(1)), roundCoord(point(2))
-    );
+    for (unsigned int i = 0; i < num_faces; ++i) {
+        P_duale.Cell0DsId[i] = i;
 
-    auto it = pMap.find(key);
-    if (it != pMap.end()) {
-    return it->second;
+        const std::vector<unsigned int>& face = P_original.Cell2DsVertices[i];
+        Eigen::Vector3d centroid(0, 0, 0);
+        for (unsigned int vid : face) {
+            centroid += P_original.Cell0DsCoordinates.col(vid);
+        }
+        centroid /= face.size();
+        centroid.normalize(); // Proiezione sulla sfera
+        P_duale.Cell0DsCoordinates.col(i) = centroid;
     }
 
-    poly.Cell0DsCoordinates.conservativeResize(3, idCounter + 1);
-    poly.Cell0DsCoordinates.col(idCounter) = point;
-    poly.Cell0DsId.push_back(idCounter);
-    poly.IdCell0Ds[idCounter] = { point(0), point(1), point(2) };
-    pMap[key] = idCounter;
-
-    return idCounter++;
+    // 2. Costruisci mappa edge -> facce (per trovare adiacenze tra facce)
+    std::map<std::pair<unsigned int, unsigned int>, std::vector<unsigned int>> edge_to_faces;
+    for (unsigned int i = 0; i < num_faces; ++i) {
+        const std::vector<unsigned int>& face = P_original.Cell2DsVertices[i];
+        unsigned int n = face.size();
+        for (unsigned int j = 0; j < n; ++j) {
+            unsigned int v1 = face[j];
+            unsigned int v2 = face[(j + 1) % n];
+            auto edge = std::minmax(v1, v2);
+            edge_to_faces[edge].push_back(i);
+        }
     }
 
+    // 3. Ogni coppia di facce adiacenti genera un lato nel duale
+    unsigned int edge_id = 0;
+    P_duale.Cell1DsExtrema.resize(2, edge_to_faces.size());
+    for (const auto& [edge, faces] : edge_to_faces) {
+        if (faces.size() == 2) {
+            unsigned int f1 = faces[0];
+            unsigned int f2 = faces[1];
+            P_duale.Cell1DsId.push_back(edge_id);
+            P_duale.Cell1DsExtrema.col(edge_id) << f1, f2;
+            ++edge_id;
+        }
+    }
+    P_duale.NumCell1Ds = edge_id;
+    P_duale.Cell1DsExtrema.conservativeResize(2, edge_id);
 
-
-    // Funzione di arrotondamento delle coordinate
-    double roundCoord(double x) 
-    {
-        return std::round(x * 1e8) / 1e8;
+    // 4. Ogni vertice originale diventa una faccia nel duale
+    std::map<unsigned int, std::vector<unsigned int>> vertex_to_faces;
+    for (unsigned int i = 0; i < num_faces; ++i) {
+        for (unsigned int vid : P_original.Cell2DsVertices[i]) {
+            vertex_to_faces[vid].push_back(i);
+        }
     }
 
+    unsigned int face_id = 0;
+    for (const auto& [vid, faces] : vertex_to_faces) {
+        std::vector<unsigned int> face = faces;
 
+        // (Opzionale: ordinare i centroidi attorno al vertice originale se necessario)
 
+        P_duale.Cell2DsId.push_back(face_id);
+        P_duale.Cell2DsVertices.push_back(face);
+        ++face_id;
+    }
+    P_duale.NumCell2Ds = face_id;
 
+    // 5. Assegna l’unica cella 3D del duale
+    P_duale.NumCell3Ds = 1;
+    P_duale.Cell3DsId = {0};
+    P_duale.Cell3DsFaces.resize(1);
+    for (unsigned int i = 0; i < P_duale.NumCell2Ds; ++i) {
+        P_duale.Cell3DsFaces[0].push_back(i);
+    }
 
-
+    return P_duale;
+}
 
 }
