@@ -84,11 +84,10 @@ Polyhedron buildPlatonicSolid(unsigned int& q)
         P.Cell0DsCoordinates.col(i) = verts[i];
 
         const Vector3d v = verts[i];
-        vector<double> coords = {v(0), v(1), v(2)};
-        P.IdCell0Ds[i] = coords; 
+        //ector<double> coords = {v(0), v(1), v(2)};
+        //P.IdCell0Ds[i] = coords; 
     }
     
-
     // Creazione lati univoci con orientamento coerente
     std::map<std::pair<unsigned int, unsigned int>, unsigned int> edgeMap;
     unsigned int edgeCounter = 0;
@@ -207,7 +206,7 @@ Polyhedron triangulateClass1(PolyhedronLibrary::Polyhedron& P, unsigned int& t_v
                     P_triangolato.Cell0DsCoordinates.conservativeResize(3, nextPointId + 1);
                     P_triangolato.Cell0DsCoordinates.col(nextPointId) = point;
                     P_triangolato.Cell0DsId.push_back(nextPointId);
-                    P_triangolato.IdCell0Ds[nextPointId] = {point(0), point(1), point(2)};
+                    //P_triangolato.IdCell0Ds[nextPointId] = {point(0), point(1), point(2)};
                     row.push_back(nextPointId);
                     pointMap[key] = nextPointId;
                     ++nextPointId;
@@ -452,12 +451,13 @@ Polyhedron Dualize(const Polyhedron& P_original)
     for (unsigned int i = 0; i < num_faces; ++i) {
         P_duale.Cell0DsId[i] = i;
 
-        const std::vector<unsigned int>& face = P_original.Cell2DsVertices[i];
-        Eigen::Vector3d centroid(0, 0, 0);
-        for (unsigned int vid : face) {
+        const vector<unsigned int> face = P_original.Cell2DsVertices[i];
+        Vector3d centroid(0, 0, 0);
+        for (unsigned int vid : face) 
+        {
             centroid += P_original.Cell0DsCoordinates.col(vid);
         }
-        centroid /= face.size();
+        centroid = centroid / face.size();
         centroid.normalize(); // Proiezione sulla sfera
         P_duale.Cell0DsCoordinates.col(i) = centroid;
     }
@@ -465,7 +465,7 @@ Polyhedron Dualize(const Polyhedron& P_original)
     // 2. Costruisci mappa edge -> facce (per trovare adiacenze tra facce)
     std::map<std::pair<unsigned int, unsigned int>, std::vector<unsigned int>> edge_to_faces;
     for (unsigned int i = 0; i < num_faces; ++i) {
-        const std::vector<unsigned int>& face = P_original.Cell2DsVertices[i];
+        const std::vector<unsigned int> face = P_original.Cell2DsVertices[i];
         unsigned int n = face.size();
         for (unsigned int j = 0; j < n; ++j) {
             unsigned int v1 = face[j];
@@ -478,15 +478,17 @@ Polyhedron Dualize(const Polyhedron& P_original)
     // 3. Ogni coppia di facce adiacenti genera un lato nel duale
     unsigned int edge_id = 0;
     P_duale.Cell1DsExtrema.resize(2, edge_to_faces.size());
-    for (const auto& [edge, faces] : edge_to_faces) {
-        if (faces.size() == 2) {
+    for (const auto& [edge, faces] : edge_to_faces) 
+    {
+        if (faces.size() == 2) 
+        {
             unsigned int f1 = faces[0];
             unsigned int f2 = faces[1];
             P_duale.Cell1DsId.push_back(edge_id);
             P_duale.Cell1DsExtrema.col(edge_id) << f1, f2;
-            ++edge_id;
         }
     }
+
     P_duale.NumCell1Ds = edge_id;
     P_duale.Cell1DsExtrema.conservativeResize(2, edge_id);
 
@@ -518,7 +520,47 @@ Polyhedron Dualize(const Polyhedron& P_original)
         P_duale.Cell3DsFaces[0].push_back(i);
     }
 
-    return P_duale;
+    // Aggiornamento Cell3D
+    P_duale.Cell3DsId = {0};
+    P_duale.Cell3DsVertices = {P_duale.Cell0DsId};
+    P_duale.Cell3DsEdges = {P_duale.Cell1DsId};
+    P_duale.Cell3DsFaces = {P_duale.Cell2DsId};
+    P_duale.NumCell3Ds = 1;
+
+    // Riempimento Cell2DsEdges
+    std::map<std::pair<unsigned int, unsigned int>, unsigned int> edge_lookup;
+    for (unsigned int eid = 0; eid < P_duale.NumCell1Ds; ++eid) {
+        unsigned int v1 = P_duale.Cell1DsExtrema(0, eid);
+        unsigned int v2 = P_duale.Cell1DsExtrema(1, eid);
+        auto key = std::minmax(v1, v2);
+        edge_lookup[key] = eid;
+    }
+
+    P_duale.Cell2DsEdges.resize(P_duale.NumCell2Ds);
+    for (unsigned int fid = 0; fid < P_duale.NumCell2Ds; ++fid) 
+    {
+        const std::vector<unsigned int> verts = P_duale.Cell2DsVertices[fid];
+        std::vector<unsigned int> edge_ids;
+        unsigned int n = verts.size();
+
+        for (unsigned int i = 0; i < n; ++i) 
+        {
+            unsigned int v1 = verts[i];
+            unsigned int v2 = verts[(i + 1) % n];
+            auto key = std::minmax(v1, v2);
+
+            auto it = edge_lookup.find(key);
+            if (it != edge_lookup.end()) {
+                edge_ids.push_back(it->second);
+            } 
+            else 
+            {   
+                edge_lookup[key] = edge_id++;
+            }
+            edge_ids.push_back(edge_lookup[key]);
+        }
+        P_duale.Cell2DsEdges[fid] = edge_ids;
+    }
 }
 
 }

@@ -16,7 +16,7 @@ struct Polyhedron
     unsigned int NumCell0Ds = 0; // numero di vertici
     std::vector<unsigned int> Cell0DsId = {}; // Cell0DsId è il vettore di ID dei vertici (dimensione 1 x NumCell0Ds)
     Eigen::MatrixXd Cell0DsCoordinates = {}; // Cell0DCoordinates è la matrice delle coordinate (dimensione 3 x NumCell0Ds)
-    std::map<unsigned int, vector<double>> IdCell0Ds = {}; // IdCell0Ds è un dizionario di id_punto - coordinate_punto
+    //std::map<unsigned int, vector<double>> IdCell0Ds = {}; // IdCell0Ds è un dizionario di id_punto - coordinate_punto
 
 
     unsigned int NumCell1Ds = 0; // numero di lati
