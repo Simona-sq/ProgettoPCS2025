@@ -73,7 +73,7 @@ int main(int argc, char* argv[])
 										mesh.Cell1DsExtrema);
 			}
 
-		if (b != c) //TRIANGOLAZIONE DI CLASSE I
+		if (b != c) // TRIANGOLAZIONE DI CLASSE I
 		{
 			cout<<"triangolazione di classe I"<<endl;
 			unsigned int t_value = b + c; //valore che mi indica in quante parti dividere ogni lato del triangolo
@@ -93,7 +93,7 @@ int main(int argc, char* argv[])
 				}
 		}
 
-		else //TRIANGOLAZIONE DI CLASSE II
+		else // TRIANGOLAZIONE DI CLASSE II
 		{
 			cout<<"triangolazione di classe II"<<endl;
 			/*
@@ -115,13 +115,13 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	//CASO CUBO (DUALE DELL'OTTAEDRO) e CASO DODECAEDRO (DUALE DELL'ICOSAEDRO)
+	// CASO CUBO (DUALE DELL'OTTAEDRO) e CASO DODECAEDRO (DUALE DELL'ICOSAEDRO)
 	else if (p == 4 || p == 5)  
 		{
 			cout<<"p = "<< p <<endl;
 			Polyhedron mesh = buildPlatonicSolid(p); //definiamo il solido platonico di partenza
 
-			if (b != c) //TRIANGOLAZIONE DI CLASSE I
+			if (b != c) // TRIANGOLAZIONE DI CLASSE I
 			{
 				cout<<"triangolazione di classe I"<<endl;
 				unsigned int t_value = b + c; //valore che mi indica in quante parti dividere ogni lato del triangolo
@@ -143,13 +143,11 @@ int main(int argc, char* argv[])
 					}
 			}
 
-			else //TRIANGOLAZIONE DI CLASSE II
+			else // TRIANGOLAZIONE DI CLASSE II
 			{
 				cout<<"triangolazione di classe II"<<endl;
 			}
-		
 		}
-
 
 	return 0;
 }

@@ -147,7 +147,7 @@ Polyhedron buildPlatonicSolid(unsigned int& q)
 
 
 // ***************************************************************************
-// Funzione per la triangolazione
+// Funzione per la triangolazione di classe 1
 Polyhedron triangulateClass1(PolyhedronLibrary::Polyhedron& P, unsigned int& t_value)
 {
     Polyhedron P_triangolato;
@@ -294,6 +294,8 @@ Polyhedron triangulateClass1(PolyhedronLibrary::Polyhedron& P, unsigned int& t_v
 }
 
 /*
+// ***************************************************************************
+// Funzione per la triangolazione di classe 2
 Polyhedron triangulateClass2(PolyhedronLibrary::Polyhedron& P, unsigned int& t_value)
 {
     using namespace Eigen;
@@ -353,7 +355,6 @@ Polyhedron triangulateClass2(PolyhedronLibrary::Polyhedron& P, unsigned int& t_v
             }
             rows.push_back(row);
         }
-
 
         for (unsigned int i = 0; i < t_value; ++i)
         {
@@ -436,12 +437,13 @@ Polyhedron triangulateClass2(PolyhedronLibrary::Polyhedron& P, unsigned int& t_v
 
     return P_triangolato;
 }
-    */
+*/
 
+// ***************************************************************************
+// Funzione per la dualizzazione
 Polyhedron Dualize(const Polyhedron& P_original) 
 {
     Polyhedron P_duale;
-
     // 1. Ogni faccia originale diventa un vertice del duale
     unsigned int num_faces = P_original.Cell2DsVertices.size();
     P_duale.NumCell0Ds = num_faces;
@@ -503,8 +505,6 @@ Polyhedron Dualize(const Polyhedron& P_original)
     unsigned int face_id = 0;
     for (const auto& [vid, faces] : vertex_to_faces) {
         std::vector<unsigned int> face = faces;
-
-        // (Opzionale: ordinare i centroidi attorno al vertice originale se necessario)
 
         P_duale.Cell2DsId.push_back(face_id);
         P_duale.Cell2DsVertices.push_back(face);

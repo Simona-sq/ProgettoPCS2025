@@ -5,7 +5,6 @@
 
 using namespace std;
 
-
 namespace PolyhedronLibrary
 {
 /// Import the triangular mesh and test if the mesh is correct
@@ -39,6 +38,5 @@ Polyhedron triangulateClass1(PolyhedronLibrary::Polyhedron& P, unsigned int& t_v
 vector<unsigned int> cycled_face_for_dual(vector<unsigned int>& face_new, const Eigen::MatrixXd& coord);
 
 Polyhedron Dualize(const Polyhedron& P_original);
-
 
 }

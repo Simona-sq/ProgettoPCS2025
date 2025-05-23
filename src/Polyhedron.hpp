@@ -4,7 +4,6 @@
 #include "Eigen/Eigen"
 
 // creo la struttura Polyhedron
-
 using namespace std;
 using namespace Eigen;
 
