@@ -60,6 +60,8 @@ int main(int argc, char* argv[])
 	{
 		Polyhedron mesh = buildPlatonicSolid(q); //definiamo il solido platonico di partenza
 	
+
+		// export del poliedro di partenza
 		Gedim::UCDUtilities utilities;
 			{
 				utilities.ExportPoints("./Cell0Ds.inp",
@@ -76,25 +78,39 @@ int main(int argc, char* argv[])
 		{
 			cout<<"triangolazione di classe I"<<endl;
 			unsigned int t_value = b + c; //valore che mi indica in quante parti dividere ogni lato del triangolo
-			Polyhedron mesh_triangolata = triangulateClass1(mesh, t_value); //triangolazione di classe 1 con parametro t_value
+			Polyhedron mesh_triangolata1 = triangulateClass1(mesh, t_value); //triangolazione di classe 1 con parametro t_value
 
+			// export del poliedro con triangolzione di classe 1
+			Gedim::UCDUtilities utilities;
+				{
+					utilities.ExportPoints("./Cell0Ds_T1.inp",
+										mesh_triangolata1.Cell0DsCoordinates);
+				}
 
-		Gedim::UCDUtilities utilities;
-			{
-				utilities.ExportPoints("./Cell0Ds_T.inp",
-									mesh_triangolata.Cell0DsCoordinates);
-			}
-
-			{
-				utilities.ExportSegments("./Cell1Ds_T.inp",
-										mesh_triangolata.Cell0DsCoordinates,
-										mesh_triangolata.Cell1DsExtrema);
-			}
+				{
+					utilities.ExportSegments("./Cell1Ds_T1.inp",
+											mesh_triangolata1.Cell0DsCoordinates,
+											mesh_triangolata1.Cell1DsExtrema);
+				}
 		}
 
 		else //TRIANGOLAZIONE DI CLASSE II
 		{
 			cout<<"triangolazione di classe II"<<endl;
+			Polyhedron mesh_triangolata2 = triangulateClass2(mesh, b);
+
+			// export del poliedro con triangolzione di classe 1
+			Gedim::UCDUtilities utilities;
+				{
+					utilities.ExportPoints("./Cell0Ds_T2.inp",
+										mesh_triangolata2.Cell0DsCoordinates);
+				}
+
+				{
+					utilities.ExportSegments("./Cell1Ds_T2.inp",
+											mesh_triangolata2.Cell0DsCoordinates,
+											mesh_triangolata2.Cell1DsExtrema);
+				}
 		}
 	}
 

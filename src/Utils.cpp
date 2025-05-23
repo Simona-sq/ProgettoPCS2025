@@ -7,7 +7,7 @@
 
 using namespace std;
 
-
+using namespace Eigen;
 namespace PolyhedronLibrary
 {
 
@@ -151,7 +151,6 @@ Polyhedron buildPlatonicSolid(unsigned int& q)
 // Funzione per la triangolazione
 Polyhedron triangulateClass1(PolyhedronLibrary::Polyhedron& P, unsigned int& t_value)
 {
-    using namespace Eigen;
     Polyhedron P_triangolato;
     
     // Copia dei dati iniziali
@@ -160,10 +159,10 @@ Polyhedron triangulateClass1(PolyhedronLibrary::Polyhedron& P, unsigned int& t_v
     unsigned int nextFaceId = 0;
 
     map<pair<unsigned int, unsigned int>, unsigned int> edgeMap; // mappa che tiene traccia dei lati già esistenti evitando duplicati
+    map<tuple<double, double, double>, unsigned int> pointMap;
 
     // LATI
     vector<vector<unsigned int>> originalFaces = P.Cell2DsVertices;
-    map<tuple<double, double, double>, unsigned int> pointMap;
     // per ogni faccia salvo gli id vertici A B C
     for (size_t fid = 0; fid < originalFaces.size(); ++fid) 
     {
@@ -192,7 +191,7 @@ Polyhedron triangulateClass1(PolyhedronLibrary::Polyhedron& P, unsigned int& t_v
                 double beta  = double(i - j) / t_value;
                 double gamma = double(j) / t_value;
                 Vector3d point = alpha * vA + beta * vB + gamma * vC; // coordinate del nuovo punto
-                point = point.normalized(); // proiezione dei vertici sulla sfera con la normalizzazione
+                //point = point.normalized(); // proiezione dei vertici sulla sfera con la normalizzazione
 
                 // Verifica duplicati 
                 auto key = make_tuple(point(0), point(1), point(2));
@@ -202,7 +201,8 @@ Polyhedron triangulateClass1(PolyhedronLibrary::Polyhedron& P, unsigned int& t_v
                     // Punto già esistente
                     row.push_back(it->second);
                 } 
-                else {
+                else 
+                {
                     // Nuovo punto
                     P_triangolato.Cell0DsCoordinates.conservativeResize(3, nextPointId + 1);
                     P_triangolato.Cell0DsCoordinates.col(nextPointId) = point;
@@ -260,7 +260,8 @@ Polyhedron triangulateClass1(PolyhedronLibrary::Polyhedron& P, unsigned int& t_v
                 auto v1 = tri[k];
                 auto v2 = tri[(k + 1) % 3];
                 auto key = minmax(v1, v2);
-                if (edgeMap.find(key) == edgeMap.end()) {
+                if (edgeMap.find(key) == edgeMap.end()) 
+                {
                     edgeMap[key] = nextEdgeId++;
                     P_triangolato.Cell1DsId.push_back(edgeMap[key]);
                 }
@@ -292,4 +293,203 @@ Polyhedron triangulateClass1(PolyhedronLibrary::Polyhedron& P, unsigned int& t_v
 
     return P_triangolato;
 }
+
+Polyhedron triangulateClass2(PolyhedronLibrary::Polyhedron& P, unsigned int& t_value)
+{
+    using namespace Eigen;
+    Polyhedron P_triangolato;
+
+    unsigned int nextPointId = 0;
+    unsigned int nextEdgeId = 0;
+    unsigned int nextFaceId = 0;
+
+    std::map<std::tuple<double, double, double>, unsigned int> pointMap;
+    std::map<std::pair<unsigned int, unsigned int>, unsigned int> edgeMap;
+
+
+    for (const auto& face : P.Cell2DsVertices)
+    {
+        unsigned int A = face[0];
+        unsigned int B = face[1];
+        unsigned int C = face[2];
+
+        Vector3d vA = P.Cell0DsCoordinates.col(A);
+        Vector3d vB = P.Cell0DsCoordinates.col(B);
+        Vector3d vC = P.Cell0DsCoordinates.col(C);
+
+        vector<std::vector<unsigned int>> rows;
+
+        for (unsigned int i = 0; i <= t_value; ++i)
+        {
+            double b = static_cast<double>(i) / t_value;
+            double a = 1.0 - 2.0 * b;
+
+            vector<unsigned int> row;
+            for (unsigned int j = 0; j <= i; ++j)
+            {
+                double gamma;
+                if (i == 0) {
+                    gamma = 0.0;
+                } else {
+                    gamma = static_cast<double>(j) / i;
+                }
+                double beta = 1.0 - gamma;
+
+                Vector3d point = a * vA + b * (beta * vB + gamma * vC);
+                //point = point.nomalized();
+                
+                // Verifica duplicati 
+                auto key = make_tuple(point(0), point(1), point(2));
+                auto it = pointMap.find(key);
+                if (it != pointMap.end()) 
+                {
+                    // Punto già esistente
+                    row.push_back(it->second);
+                } 
+                else 
+                {
+                    // Nuovo punto
+                    P_triangolato.Cell0DsCoordinates.conservativeResize(3, nextPointId + 1);
+                    P_triangolato.Cell0DsCoordinates.col(nextPointId) = point;
+                    P_triangolato.Cell0DsId.push_back(nextPointId);
+                    P_triangolato.IdCell0Ds[nextPointId] = {point(0), point(1), point(2)};
+                    row.push_back(nextPointId);
+                    pointMap[key] = nextPointId;
+                    ++nextPointId;
+                }  
+            }
+            rows.push_back(row);
+        }
+
+
+        for (unsigned int i = 0; i < t_value; ++i)
+        {
+            for (unsigned int j = 0; j < i; ++j)
+            {
+                std::vector<unsigned int> tri1 = { rows[i][j], rows[i + 1][j], rows[i + 1][j + 1] };
+                std::vector<unsigned int> tri2 = { rows[i][j], rows[i][j + 1], rows[i + 1][j + 1] };
+
+                std::vector<std::vector<unsigned int>> triangles = { tri1, tri2 };
+
+                for (const auto& tri : triangles)
+                {
+                    P_triangolato.Cell2DsVertices.push_back(tri);
+                    P_triangolato.Cell2DsId.push_back(nextFaceId++);
+
+                    std::vector<unsigned int> edgeIds;
+                    for (int k = 0; k < 3; ++k)
+                    {
+                        unsigned int v1 = tri[k];
+                        unsigned int v2 = tri[(k + 1) % 3];
+                        auto key = std::minmax(v1, v2);
+                        if (edgeMap.find(key) == edgeMap.end())
+                        {
+                            edgeMap[key] = nextEdgeId++;
+                            P_triangolato.Cell1DsId.push_back(edgeMap[key]);
+                        }
+                        edgeIds.push_back(edgeMap[key]);
+                    }
+                    P_triangolato.Cell2DsEdges.push_back(edgeIds);
+                }
+            }
+
+            // Triangolo sul bordo diagonale
+            vector<unsigned int> tri = { rows[i][i], rows[i + 1][i], rows[i + 1][i + 1] };
+            P_triangolato.Cell2DsVertices.push_back(tri);
+            P_triangolato.Cell2DsId.push_back(nextFaceId++);
+
+            vector<unsigned int> edgeIds;
+            for (int k = 0; k < 3; ++k)
+            {
+                unsigned int v1 = tri[k];
+                unsigned int v2 = tri[(k + 1) % 3];
+                auto key = std::minmax(v1, v2);
+                if (edgeMap.find(key) == edgeMap.end())
+                {
+                    edgeMap[key] = nextEdgeId++;
+                    P_triangolato.Cell1DsId.push_back(edgeMap[key]);
+                }
+                edgeIds.push_back(edgeMap[key]);
+            }
+            P_triangolato.Cell2DsEdges.push_back(edgeIds);
+        }
+    }
+
+    P_triangolato.NumCell0Ds = nextPointId;
+    P_triangolato.NumCell1Ds = edgeMap.size();
+    P_triangolato.NumCell2Ds = nextFaceId;
+
+    P_triangolato.Cell1DsExtrema = MatrixXi(2, P_triangolato.NumCell1Ds);
+    for (const auto& [key, eid] : edgeMap)
+    {
+        P_triangolato.Cell1DsExtrema(0, eid) = key.first;
+        P_triangolato.Cell1DsExtrema(1, eid) = key.second;
+    }
+
+    P_triangolato.Cell3DsId = { 0 };
+    P_triangolato.Cell3DsVertices = { P_triangolato.Cell0DsId };
+    P_triangolato.Cell3DsEdges = { P_triangolato.Cell1DsId };
+    P_triangolato.Cell3DsFaces = { P_triangolato.Cell2DsId };
+    P_triangolato.NumCell3Ds = 1;
+
+
+
+    for (const auto& [id, coords] : P_triangolato.IdCell0Ds) {
+        std::cout << "ID: " << id << " -> [";
+        for (size_t i = 0; i < coords.size(); ++i) {
+            std::cout << coords[i];
+            if (i < coords.size() - 1) std::cout << ", ";
+        }
+        std::cout << "]\n";
+    }
+
+
+
+
+
+
+    return P_triangolato;
+}
+
+
+// Funzione di aggiunta di un punto al poliedro
+unsigned int addPointToPolyhedron(Vector3d point,
+        Polyhedron& poly,
+        std::map<std::tuple<double, double, double>, unsigned int>& pMap,
+        unsigned int& idCounter)
+    {
+    //point.normalize();  // Proiezione sulla sfera
+
+    std::tuple<double, double, double> key = std::make_tuple(
+    roundCoord(point(0)), roundCoord(point(1)), roundCoord(point(2))
+    );
+
+    auto it = pMap.find(key);
+    if (it != pMap.end()) {
+    return it->second;
+    }
+
+    poly.Cell0DsCoordinates.conservativeResize(3, idCounter + 1);
+    poly.Cell0DsCoordinates.col(idCounter) = point;
+    poly.Cell0DsId.push_back(idCounter);
+    poly.IdCell0Ds[idCounter] = { point(0), point(1), point(2) };
+    pMap[key] = idCounter;
+
+    return idCounter++;
+    }
+
+
+
+    // Funzione di arrotondamento delle coordinate
+    double roundCoord(double x) 
+    {
+        return std::round(x * 1e8) / 1e8;
+    }
+
+
+
+
+
+
+
 }
