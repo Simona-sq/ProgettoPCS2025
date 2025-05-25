@@ -53,9 +53,7 @@ pair<vector<Vector3d>, vector<vector<unsigned int>>> getSolidData(unsigned int& 
             { 0.8506508, 0.618034, -0.5257311}, { 0.8506508, -0.618034, -0.5257311}, {-0.3249197, 1.0, -0.5257311}, 
             {-1.051462, 0.0, -0.5257311}, {-0.3249197, -1.0, -0.5257311}, {0.0, 0.0, -1.175571}
         };
-
         for (auto& v : raw) verts.push_back(v.normalized());
-
         faces = {
             {0, 1, 2}, {0, 2, 3}, {0, 3, 4}, {0, 4, 5}, {0, 5, 1},
             {1, 5, 7}, {1, 7, 6}, {1, 6, 2}, {2, 6, 8}, {2, 8, 3},
@@ -72,7 +70,6 @@ pair<vector<Vector3d>, vector<vector<unsigned int>>> getSolidData(unsigned int& 
 Polyhedron buildPlatonicSolid(unsigned int& q) 
 {
     Polyhedron P;
-
     auto [verts, faces] = getSolidData(q);
 
     // Riempimento Cell0Ds
@@ -190,7 +187,7 @@ Polyhedron triangulateClass1(PolyhedronLibrary::Polyhedron& P, unsigned int& t_v
                 double beta  = double(i - j) / t_value;
                 double gamma = double(j) / t_value;
                 Vector3d point = alpha * vA + beta * vB + gamma * vC; // coordinate del nuovo punto
-                //point = point.normalized(); // proiezione dei vertici sulla sfera con la normalizzazione
+                point = point.normalized(); // proiezione dei vertici sulla sfera con la normalizzazione
 
                 // Verifica duplicati 
                 auto key = make_tuple(point(0), point(1), point(2));
@@ -234,7 +231,7 @@ Polyhedron triangulateClass1(PolyhedronLibrary::Polyhedron& P, unsigned int& t_v
                     for (int k = 0; k < 3; ++k) 
 
                     
-                    { // itera su igni vertice del triangolo corrente
+                    { // itera su ogni vertice del triangolo corrente
                         auto v1 = tri[k]; // vertice corrente
                         auto v2 = tri[(k + 1) % 3]; // vertice successivo + condizione per la chiusura del tiangolo
                         auto key = minmax(v1, v2); // ordina la coppia per evitare duplicati
@@ -547,10 +544,11 @@ Polyhedron Dualize(const Polyhedron& P_original)
         {
             unsigned int v1 = verts[i];
             unsigned int v2 = verts[(i + 1) % n];
-            auto key = std::minmax(v1, v2);
+            auto key = minmax(v1, v2);
 
             auto it = edge_lookup.find(key);
-            if (it != edge_lookup.end()) {
+            if (it != edge_lookup.end()) 
+            {
                 edge_ids.push_back(it->second);
             } 
             else 
@@ -559,8 +557,11 @@ Polyhedron Dualize(const Polyhedron& P_original)
             }
             edge_ids.push_back(edge_lookup[key]);
         }
+
         P_duale.Cell2DsEdges[fid] = edge_ids;
     }
+
+    return P_duale;
 }
 
 }
