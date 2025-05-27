@@ -68,15 +68,16 @@ int main(int argc, char* argv[])
 			Polyhedron mesh_triangolata1 = triangulateClass1(mesh, t_value); //triangolazione di classe 1 con parametro t_value
 			Polyhedron mesh_proiettata = projectPolyhedronOnSphere(mesh_triangolata1);
 			Poliedro_finale = mesh_proiettata;
-
 		}
 
 		else // TRIANGOLAZIONE DI CLASSE II
 		{
 			cout<<"triangolazione di classe II"<<endl;
-
+			Polyhedron mesh_triangolata1 = triangulateClass1(mesh, b); //triangolazione di classe 1 con parametro t_value
+			Polyhedron mesh_triangolata2 = triangulateClass2(mesh_triangolata1);
+			Polyhedron mesh_proiettata = projectPolyhedronOnSphere(mesh_triangolata2);
+			Poliedro_finale = mesh_triangolata2;
 		}
-
 	}
 	
 
@@ -98,16 +99,25 @@ int main(int argc, char* argv[])
 		else // TRIANGOLAZIONE DI CLASSE II
 		{
 			cout<<"triangolazione di classe II"<<endl;
+			Polyhedron mesh_triangolata1 = triangulateClass1(mesh, b); //triangolazione di classe 1 con parametro t_value
+			Polyhedron mesh_triangolata2 = triangulateClass2(mesh_triangolata1);
+			Polyhedron mesh_dualizzata = Dualize(mesh_triangolata2);
+			Polyhedron mesh_proiettata = projectPolyhedronOnSphere(mesh_dualizzata);
+			Poliedro_finale = mesh_dualizzata;
 		}
-
 	}
 
-
 	
-	//Cammini minimi
-	
+	//Cammini minimi	
 	if(argc == 7)
-	{
+	{	
+		// controllo su v1 e v2
+		if (v1 >= Poliedro_finale.NumCell0Ds || v2 >= Poliedro_finale.NumCell0Ds) 
+		{
+			cerr<<"I valori di v1 e v2 non sono validi: devono appartenere all'intervallo [0, " << Poliedro_finale.NumCell0Ds -1<< "]" <<endl;
+			return 1;
+		}
+
 		vector<Gedim::UCDProperty<double>> points_properties;
 		vector<Gedim::UCDProperty<double>> segments_properties;
 		points_properties.reserve(1); //Proprietà: ShortPath
@@ -153,15 +163,16 @@ int main(int argc, char* argv[])
 			}
 	
 		}
+
 		ExportPolyhedron(Poliedro_finale, points_properties, segments_properties);
 	}
+
 	else
 	{
 		ExportPolyhedron(Poliedro_finale);
 	}
 	
 	return 0;
-
 
 }
 

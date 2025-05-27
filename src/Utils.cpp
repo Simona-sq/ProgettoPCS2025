@@ -289,151 +289,247 @@ Polyhedron triangulateClass1(const Polyhedron& P, const unsigned int& t_value)
     return P_triangolato;
 }
 
-/*
+
 // ***************************************************************************
 // Funzione per la triangolazione di classe 2
-Polyhedron triangulateClass2(PolyhedronLibrary::Polyhedron& P, unsigned int& t_value)
+Polyhedron triangulateClass2(const Polyhedron& P_class1)
 {
-    using namespace Eigen;
-    Polyhedron P_triangolato1 = triangulateClass1(P, t_value); //triangolazione di classe 1
-    Polyhedron P_triangolato2; //creo nuova mesh per salvare dati della nuova traingolazione
+    Polyhedron P2;
 
     unsigned int nextPointId = 0;
     unsigned int nextEdgeId = 0;
     unsigned int nextFaceId = 0;
 
-    map<tuple<double, double, double>, unsigned int> pointMap;
-    map<pair<unsigned int, unsigned int>, unsigned int> edgeMap;
-    //unordered_set<unsigned int> midpoints_ids;
-    set<unsigned int> midpoints_ids;
+    map<pair<unsigned int, unsigned int>, unsigned int> edgeMap; // per evitare duplicati spigoli
+    map<tuple<double, double, double>, unsigned int> pointMap;   // per evitare duplicati punti
 
-    for (const auto& face : P_triangolato1.Cell2DsVertices)  //itera su ogni faccia della triangolazione di classe 1 
+    // Copia i punti originali
+    for (unsigned int pid = 0; pid < P_class1.NumCell0Ds; ++pid)
     {
-        unsigned int A = face[0];
-        unsigned int B = face[1];
-        unsigned int C = face[2];
+        Vector3d pt = P_class1.Cell0DsCoordinates.col(pid);
+        P2.Cell0DsCoordinates.conservativeResize(3, nextPointId + 1);
+        P2.Cell0DsCoordinates.col(nextPointId) = pt;
+        P2.Cell0DsId.push_back(nextPointId);
+        pointMap[make_tuple(pt(0), pt(1), pt(2))] = nextPointId;
+        ++nextPointId;
+    }
 
-        Vector3d vA = P_triangolato1.Cell0DsCoordinates.col(A);
-        Vector3d vB = P_triangolato1.Cell0DsCoordinates.col(B);
-        Vector3d vC = P_triangolato1.Cell0DsCoordinates.col(C);
+    // Calcola baricentri delle facce
+    vector<unsigned int> faceBarycenterIds(P_class1.NumCell2Ds);
+    for (unsigned int fid = 0; fid < P_class1.NumCell2Ds; ++fid)
+    {
+        const vector<unsigned int>& faceVerts = P_class1.Cell2DsVertices[fid];
+        Vector3d barycenter = Vector3d::Zero();
+        for (auto vid : faceVerts)
+            barycenter += P_class1.Cell0DsCoordinates.col(vid);
+        barycenter /= faceVerts.size();
 
-        Vector3d M_ab = 0.5 * (vA + vB); //punto medio AB
-        M_ab = M_ab.normalized();
-        Vector3d M_bc = 0.5 * (vB + vC);
-        M_bc = M_bc.normalized();
-        Vector3d M_ca = 0.5 * (vC + vA);
-        M_ca = M_ca.normalized();
-
-        Vector3d centroid = (vA + vB + vC) / 3; //baricentro
-        centroid = centroid.normalized();
-
-        vector<vector<unsigned int>> rows;
-
-                // Verifica duplicati 
-                auto key = make_tuple(point(0), point(1), point(2));
-                auto it = pointMap.find(key);
-                if (it != pointMap.end()) 
-                {
-                    // Punto già esistente
-                    row.push_back(it->second);
-                } 
-                else 
-                {
-                    // Nuovo punto
-                    P_triangolato.Cell0DsCoordinates.conservativeResize(3, nextPointId + 1);
-                    P_triangolato.Cell0DsCoordinates.col(nextPointId) = point;
-                    P_triangolato.Cell0DsId.push_back(nextPointId);
-                    P_triangolato.IdCell0Ds[nextPointId] = {point(0), point(1), point(2)};
-                    row.push_back(nextPointId);
-                    pointMap[key] = nextPointId;
-                    ++nextPointId;
-                }  
-            }
-            rows.push_back(row);
-        }
-
-        for (unsigned int i = 0; i < t_value; ++i)
+        auto key = make_tuple(barycenter(0), barycenter(1), barycenter(2));
+        if (pointMap.find(key) == pointMap.end())
         {
-            for (unsigned int j = 0; j < i; ++j)
-            {
-                std::vector<unsigned int> tri1 = { rows[i][j], rows[i + 1][j], rows[i + 1][j + 1] };
-                std::vector<unsigned int> tri2 = { rows[i][j], rows[i][j + 1], rows[i + 1][j + 1] };
+            P2.Cell0DsCoordinates.conservativeResize(3, nextPointId + 1);
+            P2.Cell0DsCoordinates.col(nextPointId) = barycenter;
+            P2.Cell0DsId.push_back(nextPointId);
+            faceBarycenterIds[fid] = nextPointId;
+            pointMap[key] = nextPointId;
+            ++nextPointId;
+        }
+        else
+        {
+            faceBarycenterIds[fid] = pointMap[key];
+        }
+    }
 
-                std::vector<std::vector<unsigned int>> triangles = { tri1, tri2 };
+    // Calcola punti medi degli spigoli
+    vector<unsigned int> midEdgePointIds(P_class1.NumCell1Ds);
+    for (unsigned int eid = 0; eid < P_class1.NumCell1Ds; ++eid)
+    {
+        unsigned int v0 = P_class1.Cell1DsExtrema(0, eid);
+        unsigned int v1 = P_class1.Cell1DsExtrema(1, eid);
 
-                for (const auto& tri : triangles)
-                {
-                    P_triangolato.Cell2DsVertices.push_back(tri);
-                    P_triangolato.Cell2DsId.push_back(nextFaceId++);
+        Vector3d midpoint = 0.5 * (P_class1.Cell0DsCoordinates.col(v0) + P_class1.Cell0DsCoordinates.col(v1));
+        auto key = make_tuple(midpoint(0), midpoint(1), midpoint(2));
+        if (pointMap.find(key) == pointMap.end())
+        {
+            P2.Cell0DsCoordinates.conservativeResize(3, nextPointId + 1);
+            P2.Cell0DsCoordinates.col(nextPointId) = midpoint;
+            P2.Cell0DsId.push_back(nextPointId);
+            midEdgePointIds[eid] = nextPointId;
+            pointMap[key] = nextPointId;
+            ++nextPointId;
+        }
+        else
+        {
+            midEdgePointIds[eid] = pointMap[key];
+        }
+    }
 
-                    std::vector<unsigned int> edgeIds;
-                    for (int k = 0; k < 3; ++k)
-                    {
-                        unsigned int v1 = tri[k];
-                        unsigned int v2 = tri[(k + 1) % 3];
-                        auto key = std::minmax(v1, v2);
-                        if (edgeMap.find(key) == edgeMap.end())
-                        {
-                            edgeMap[key] = nextEdgeId++;
-                            P_triangolato.Cell1DsId.push_back(edgeMap[key]);
-                        }
-                        edgeIds.push_back(edgeMap[key]);
-                    }
-                    P_triangolato.Cell2DsEdges.push_back(edgeIds);
-                }
-            }
+    // Mappa lato -> facce adiacenti
+    map<pair<unsigned int, unsigned int>, vector<unsigned int>> edgeToFaces;
+    for (unsigned int fid = 0; fid < P_class1.NumCell2Ds; ++fid)
+    {
+        const vector<unsigned int>& faceEdges = P_class1.Cell2DsEdges[fid];
+        for (auto eid : faceEdges)
+        {
+            unsigned int v0 = P_class1.Cell1DsExtrema(0, eid);
+            unsigned int v1 = P_class1.Cell1DsExtrema(1, eid);
+            auto key = minmax(v0, v1);
+            edgeToFaces[key].push_back(fid);
+        }
+    }
 
-            // Triangolo sul bordo diagonale
-            vector<unsigned int> tri = { rows[i][i], rows[i + 1][i], rows[i + 1][i + 1] };
-            P_triangolato.Cell2DsVertices.push_back(tri);
-            P_triangolato.Cell2DsId.push_back(nextFaceId++);
+    // Costruzione triangoli di Classe II
+    for (unsigned int fid = 0; fid < P_class1.NumCell2Ds; ++fid)
+    {
+        const vector<unsigned int>& faceVerts = P_class1.Cell2DsVertices[fid];
+        unsigned int v0 = faceVerts[0];
+        unsigned int v1 = faceVerts[1];
+        unsigned int v2 = faceVerts[2];
 
-            vector<unsigned int> edgeIds;
+        const vector<unsigned int>& faceEdges = P_class1.Cell2DsEdges[fid];
+        unsigned int e0 = faceEdges[0];
+        unsigned int e1 = faceEdges[1];
+        unsigned int e2 = faceEdges[2];
+
+        unsigned int m01 = midEdgePointIds[e0];
+        unsigned int m12 = midEdgePointIds[e1];
+        unsigned int m20 = midEdgePointIds[e2];
+
+        unsigned int b = faceBarycenterIds[fid];
+
+        // Triangoli da aggiungere
+        vector<vector<unsigned int>> candidateTriangles = {
+            {v0, m01, b},
+            {m01, v1, b},
+            {v1, m12, b},
+            {m12, v2, b},
+            {v2, m20, b},
+            {m20, v0, b}
+        };
+
+        // Controllo se un lato è interno (due facce adiacenti)
+        auto isInternalEdge = [&](unsigned int eid) -> bool {
+            unsigned int vv0 = P_class1.Cell1DsExtrema(0, eid);
+            unsigned int vv1 = P_class1.Cell1DsExtrema(1, eid);
+            auto key = minmax(vv0, vv1);
+            return (edgeToFaces[key].size() == 2);
+        };
+
+        for (const auto& tri : candidateTriangles)
+        {
+            // EVITO di creare il triangolo centrale che connetterebbe due baricentri tramite punto medio
+
+            // Nel tuo schema, questo triangolo non fa parte di candidateTriangles,
+            // quindi non lo aggiungo proprio.
+
+            // Quindi aggiungo sempre i triangoli esterni (6 per faccia)
+
+            P2.Cell2DsVertices.push_back(tri);
+            P2.Cell2DsId.push_back(nextFaceId++);
+
+            vector<unsigned int> triEdgeIds;
             for (int k = 0; k < 3; ++k)
             {
-                unsigned int v1 = tri[k];
-                unsigned int v2 = tri[(k + 1) % 3];
-                auto key = std::minmax(v1, v2);
+                unsigned int a = tri[k];
+                unsigned int c = tri[(k + 1) % 3];
+                auto key = minmax(a, c);
+
                 if (edgeMap.find(key) == edgeMap.end())
                 {
                     edgeMap[key] = nextEdgeId++;
-                    P_triangolato.Cell1DsId.push_back(edgeMap[key]);
+                    P2.Cell1DsId.push_back(edgeMap[key]);
                 }
-                edgeIds.push_back(edgeMap[key]);
+                triEdgeIds.push_back(edgeMap[key]);
             }
-            P_triangolato.Cell2DsEdges.push_back(edgeIds);
+            P2.Cell2DsEdges.push_back(triEdgeIds);
         }
     }
 
-    P_triangolato.NumCell0Ds = nextPointId;
-    P_triangolato.NumCell1Ds = edgeMap.size();
-    P_triangolato.NumCell2Ds = nextFaceId;
+    // Aggiorna contatori e matrici
+    P2.NumCell0Ds = nextPointId;
+    P2.NumCell1Ds = edgeMap.size();
+    P2.NumCell2Ds = nextFaceId;
 
-    P_triangolato.Cell1DsExtrema = MatrixXi(2, P_triangolato.NumCell1Ds);
+    P2.Cell1DsExtrema = MatrixXi(2, P2.NumCell1Ds);
     for (const auto& [key, eid] : edgeMap)
     {
-        P_triangolato.Cell1DsExtrema(0, eid) = key.first;
-        P_triangolato.Cell1DsExtrema(1, eid) = key.second;
+        P2.Cell1DsExtrema(0, eid) = key.first;
+        P2.Cell1DsExtrema(1, eid) = key.second;
     }
 
-    P_triangolato.Cell3DsId = { 0 };
-    P_triangolato.Cell3DsVertices = { P_triangolato.Cell0DsId };
-    P_triangolato.Cell3DsEdges = { P_triangolato.Cell1DsId };
-    P_triangolato.Cell3DsFaces = { P_triangolato.Cell2DsId };
-    P_triangolato.NumCell3Ds = 1;
+    P2.Cell3DsVertices = {P2.Cell0DsId};
+    P2.Cell3DsEdges = {P2.Cell1DsId};
+    P2.Cell3DsFaces = {P2.Cell2DsId};
 
-    for (const auto& [id, coords] : P_triangolato.IdCell0Ds) {
-        std::cout << "ID: " << id << " -> [";
-        for (size_t i = 0; i < coords.size(); ++i) {
-            std::cout << coords[i];
-            if (i < coords.size() - 1) std::cout << ", ";
-        }
-        std::cout << "]\n";
+
+
+    // Stampa di verifica
+    std::cout << "NumCell0Ds: " << P2.NumCell0Ds << std::endl;
+    std::cout << "NumCell1Ds: " << P2.NumCell1Ds << std::endl;
+    std::cout << "NumCell2Ds: " << P2.NumCell2Ds << std::endl;
+    std::cout << "NumCell3Ds: " << P2.NumCell3Ds << std::endl;
+
+    std::cout << "Cell0DsId (ID dei vertici):" << std::endl;
+    for (auto id : P2.Cell0DsId)
+        std::cout << id << " ";
+    std::cout << std::endl;
+
+    std::cout << "Cell0DsCoordinates (coordinate dei vertici):" << std::endl;
+    std::cout << P2.Cell0DsCoordinates << std::endl;
+
+    std::cout << "Cell1DsId (ID dei lati):" << std::endl;
+    for (auto id : P2.Cell1DsId)
+        std::cout << id << " ";
+    std::cout << std::endl;
+
+    std::cout << "Cell1DsExtrema (estremi dei lati - ID vertici iniziale/finale):" << std::endl;
+    std::cout << P2.Cell1DsExtrema << std::endl;
+
+    std::cout << "Cell2DsId (ID delle facce 2D):" << std::endl;
+    for (auto id : P2.Cell2DsId)
+        std::cout << id << " ";
+    std::cout << std::endl;
+    std::cout << "Cell2DsVertices (vertici di ciascuna faccia 2D):" << std::endl;
+    for (size_t i = 0; i < P2.Cell2DsVertices.size(); ++i) {
+        std::cout << "Faccia " << i << ": ";
+        for (auto v : P2.Cell2DsVertices[i])
+            std::cout << v << " ";
+        std::cout << std::endl;
+    }
+    std::cout << "Cell2DsEdges (lati di ciascuna faccia 2D):" << std::endl;
+    for (size_t i = 0; i < P2.Cell2DsEdges.size(); ++i) {
+        std::cout << "Faccia " << i << ": ";
+        for (auto e : P2.Cell2DsEdges[i])
+            std::cout << e << " ";
+        std::cout << std::endl;
+    }
+    std::cout << "Cell3DsId (ID delle celle 3D):" << P2.Cell3DsId << " " << std::endl;
+    std::cout << std::endl;
+    std::cout << "Cell3DsVertices (vertici per ogni cella 3D):" << std::endl;
+    for (size_t i = 0; i < P2.Cell3DsVertices.size(); ++i) {
+        std::cout << "Cella " << i << ": ";
+        for (auto v : P2.Cell3DsVertices[i])
+            std::cout << v << " ";
+        std::cout << std::endl;
+    }
+    std::cout << "Cell3DsEdges (spigoli per ogni cella 3D):" << std::endl;
+    for (size_t i = 0; i < P2.Cell3DsEdges.size(); ++i) {
+        std::cout << "Cella " << i << ": ";
+        for (auto e : P2.Cell3DsEdges[i])
+            std::cout << e << " ";
+        std::cout << std::endl;
+    }
+    std::cout << "Cell3DsFaces (facce per ogni cella 3D):" << std::endl;
+    for (size_t i = 0; i < P2.Cell3DsFaces.size(); ++i) {
+        std::cout << "Cella " << i << ": ";
+        for (auto f : P2.Cell3DsFaces[i])
+            std::cout << f << " ";
+        std::cout << std::endl;
     }
 
-    return P_triangolato;
+    return P2;
 }
-*/
+
 
 // ***************************************************************************
 // Funzione per la dualizzazione
@@ -566,15 +662,13 @@ Polyhedron Dualize(const Polyhedron& P_normale)
             }
             edge_ids.push_back(edge_lookup[key]);
         }
-
         P_duale.Cell2DsEdges[fid] = edge_ids;
-
     }
-
-    return P_duale;
-    
+    return P_duale;   
 }
 
+
+// ***************************************************************************
 Polyhedron projectPolyhedronOnSphere(const Polyhedron& P)
 {
     Polyhedron projected = P;
@@ -585,10 +679,8 @@ Polyhedron projectPolyhedronOnSphere(const Polyhedron& P)
     return projected;
 }
 
-
 void ExportPolyhedron(const Polyhedron& P, const vector<Gedim::UCDProperty<double>>& points_properties, const vector<Gedim::UCDProperty<double>>& segments_properties)
 {
-
     Gedim::UCDUtilities utilities;
     {
         utilities.ExportPoints("./Cell0Ds.inp",
@@ -604,10 +696,9 @@ void ExportPolyhedron(const Polyhedron& P, const vector<Gedim::UCDProperty<doubl
                                 segments_properties);
     }
     Esporta_file(P);
-
 }
 
-
+// ***************************************************************************
 void Esporta_file(const Polyhedron& P)
 {
     //File: "Cell0Ds.txt"
@@ -677,114 +768,81 @@ void Esporta_file(const Polyhedron& P)
     cout << "Dati del solido geodetico salvati nei file: 'Cell0Ds.txt','Cell1Ds.txt','Cell2Ds.txt','Cell3Ds.txt' " << endl;
 }
 
+// ***************************************************************************
 vector<unsigned int> Cammini_minimi(const Polyhedron& P, const int& v1, const int& v2)
 {
-    //Make the adjaceny list of the graph
     const MatrixXi edges = P.Cell1DsExtrema;
-    
-    vector<vector<unsigned int>> lista_adiacenza; 
-    lista_adiacenza.reserve(P.NumCell0Ds);
-    for(unsigned int id = 0; id < P.NumCell0Ds; id++)
+    const MatrixXd coords = P.Cell0DsCoordinates;
+
+    // Costruisco lista adiacenza con pesi 
+    vector<vector<pair<unsigned int, double>>> lista_adiacenza(P.NumCell0Ds); 
+    for(unsigned int j = 0; j < edges.cols(); j++)
     {
-        vector<unsigned int> lista_vicini;
-        for(unsigned int j = 0; j < edges.cols(); j++)
-        {
-            Vector2i edge = edges.col(j); // coppie di vertici che formano lo spigolo j
-            unsigned int inizio = edge[0];
-            unsigned int fine = edge[1];
-            
-            if(id == inizio) lista_vicini.push_back(fine);
-            if(id == fine) lista_vicini.push_back(inizio);
-        }
-        lista_adiacenza.push_back(lista_vicini);
+        unsigned int inizio = edges(0, j);
+        unsigned int fine = edges(1, j);
+        Vector3d p1 = coords.col(inizio);
+        Vector3d p2 = coords.col(fine);
+        double distanza = (p1 - p2).norm();
+
+        lista_adiacenza[inizio].emplace_back(fine, distanza);
+        lista_adiacenza[fine].emplace_back(inizio, distanza);
     }
 
-
-    //Implementation of the BFS to look for short path between id_D and id_A
-    vector<unsigned int> path;
-    // caso in cui v1 = v2
-    if(v1 == v2)
-    {
-        path.reserve(1);
-        path.push_back(v1);
-        return path;
-    }
-
-    // caso in cui v1 != v2
+    // Implementazione di Dijkstra
     const unsigned int N = P.NumCell0Ds;
-    vector<bool> visited(N, false); //N elementi booleani inizializzati a "FALSE"
-    vector<unsigned int> parent(N, N); //N = pivot value 
-    queue<unsigned int> q;
+    vector<double> distanza(N, numeric_limits<double>::max());
+    vector<unsigned int> parent(N, N); 
+    priority_queue<pair<double, unsigned int>, vector<pair<double, unsigned int>>, greater<pair<double, unsigned int>>> heap;
 
+    distanza[v1] = 0.0;
+    heap.emplace(0.0, v1);
 
-    q.push(v1);
-    visited[v1] = true;
-    parent[v1] = N;
-
-    bool stop = false;
-    while(!q.empty() || !stop)
+    while(!heap.empty())
     {
-        unsigned int current = q.front(); //restituisce il primo elememto della coda 
-        q.pop();
+        auto [dist_corrente, nodo_corrente] = heap.top();
+        heap.pop();
 
-        //Esamina i vicini del vertice corrente 
-        for(int neighbour : lista_adiacenza[current])
+        if(nodo_corrente == v2) 
+            break; // trovato cammino più breve fino a v2
+
+        for(auto [vicino, peso] : lista_adiacenza[nodo_corrente])
         {
-            if(!visited[neighbour])
+            double nuova_distanza = dist_corrente + peso;
+            if(nuova_distanza < distanza[vicino])
             {
-                visited[neighbour] = true;
-                parent[neighbour] = current;
-                q.push(neighbour);
-
-                // Se neighbour è v2 allora stop
-                if(neighbour == v2)
-                {
-                    stop = true;
-                    break;
-                }     
+                distanza[vicino] = nuova_distanza;
+                parent[vicino] = nodo_corrente;
+                heap.emplace(nuova_distanza, vicino);
             }
         }
     }
 
-    //Ricostruzione del percorso dalla fine all'inizio
-    unsigned int node = v2;
+    // Ricostruzione percorso
+    vector<unsigned int> path;
+    if(distanza[v2] == numeric_limits<double>::max())
+    {
+        cout << "Nessun percorso trovato tra " << v1 << " e " << v2 << endl;
+        return path;
+    }
 
-    while(node != N)
+    for(unsigned int node = v2; node != N; node = parent[node])
     {
         path.push_back(node);
-        node = parent[node];
     }
+    reverse(path.begin(), path.end());
 
-    reverse(path.begin(), path.end()); //inverte l'ordine del percorso
+    /*Stampo percorso
+    cout << "Path: ";
+    for(unsigned int i : path)
+        cout << i << ' ';
+    cout << endl;
+    */
 
-    ////////
-    cout<<"Path: ";
-    for(unsigned int i = 0; i < path.size(); i++){
-        cout<<path[i]<<' ';
-    }
-    cout<<endl;
-
-    //Numero di lati
-    cout<<"Il cammino minimo che collega "<<v1<<" e "<<v2<<" ha "<<(path.size()-1)<< " lati "<<endl;
-
-
-    // Calcolo la lunghezza geometrica
-    double length = 0.0;
-    for(unsigned int i = 0; i < path.size() - 1; i++)
-    {
-        unsigned int id_corrente = path[i];
-        unsigned int id_successivo = path[i+1];
-
-        Vector3d corrente = P.Cell0DsCoordinates.col(id_corrente);
-        Vector3d successivo = P.Cell0DsCoordinates.col(id_successivo);
-        length += (corrente-successivo).norm();
-    }
-    cout<<"Il cammino minimo che collega "<<v1<<" e "<<v2<<" ha lunghezza: "<<length<<endl;
+    cout<<"Il cammino minimo che collega "<< v1 <<" e "<< v2 <<" ha "<<(path.size()-1)<< " lati "<< endl;
+    cout << "Il cammino minimo che collega " << v1 << " e " << v2 << " ha lunghezza: " << distanza[v2] << endl;
 
     return path;
 }
-
-
 
 
 }
