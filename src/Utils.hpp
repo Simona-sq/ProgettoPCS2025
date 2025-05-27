@@ -1,5 +1,6 @@
 #pragma once
 
+#include "UCDUtilities.hpp"
 #include <iostream>
 #include "Polyhedron.hpp"
 
@@ -31,12 +32,18 @@ pair<vector<Vector3d>, vector<vector<unsigned int>>> getSolidData(unsigned int& 
 
 Polyhedron buildPlatonicSolid(unsigned int& q);
 
-Polyhedron triangulateClass1(PolyhedronLibrary::Polyhedron& P, unsigned int& t_value);
+Polyhedron triangulateClass1(const Polyhedron& P, const unsigned int& t_value);
 
-//Polyhedron triangulateClass2(PolyhedronLibrary::Polyhedron& P, unsigned int& t_value);
+Polyhedron Dualize(const Polyhedron& P_normale);
 
-vector<unsigned int> cycled_face_for_dual(vector<unsigned int>& face_new, const Eigen::MatrixXd& coord);
+Polyhedron projectPolyhedronOnSphere(const Polyhedron& P);
 
-Polyhedron Dualize(const Polyhedron& P_original);
+void ExportPolyhedron(const Polyhedron& P,
+                    const vector<Gedim::UCDProperty<double>>& points_properties = {},
+                    const vector<Gedim::UCDProperty<double>>& segments_properties = {});
+
+void Esporta_file(const Polyhedron& P);
+
+vector<unsigned int> Cammini_minimi(const Polyhedron& P, const int& v1, const int& v2);
 
 }

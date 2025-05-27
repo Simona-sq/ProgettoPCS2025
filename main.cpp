@@ -1,7 +1,9 @@
 #include <iostream>
+#include <vector>
 #include "Polyhedron.hpp"
 #include "Utils.hpp"
 #include "UCDUtilities.hpp"
+#include <unordered_set>
 
 using namespace std;
 using namespace Eigen;
@@ -17,23 +19,19 @@ int main(int argc, char* argv[])
 	unsigned int v2 = 0;
 	
 	// controllo che il tipo dei valori inseriti sia int
+	p = stoi(argv[1]); //commenta stoi
+	q = stoi(argv[2]);
+	b = stoi(argv[3]);
+	c = stoi(argv[4]);
 	if (argc == 5) 
 	{
-		p = stoi(argv[1]);  //commenta stoi
-		q = stoi(argv[2]);
-		b = stoi(argv[3]);
-		c = stoi(argv[4]);
-		cout << "Input ricevuto: p=" << p << ", q=" << q << ", b=" << b << ", c=" << c << "\n";
+		cout << "Input ricevuto: p = " << p << ", q = " << q << ", b = " << b << ", c = " << c << "\n";
     }
 	else if (argc == 7) 
 	{
-		p = stoi(argv[1]);
-		q = stoi(argv[2]);
-		b = stoi(argv[3]);
-		c = stoi(argv[4]);
 		v1 = stoi(argv[5]);
 		v2 = stoi(argv[6]);
-		cout << "Input ricevuto: p=" << p << ", q=" << q << ", b=" << b << ", c=" << c << ", v1=" << v1 << ", v2=" << v2 << "\n";
+		cout << "Input ricevuto: p = " << p << ", q = " << q << ", b = " << b << ", c = " << c << ", v1 = " << v1 << ", v2 = " << v2 << "\n";
     }
 	else
  	{
@@ -57,99 +55,114 @@ int main(int argc, char* argv[])
 
 	// Creo il solido platonico e riempo la struct
 	// CASO TETRAEDRO, OTTAEDRO, ICOSAEDRO
+	Polyhedron Poliedro_finale;
+
 	if (p == 3)
 	{	
 		Polyhedron mesh = buildPlatonicSolid(q); //definiamo il solido platonico di partenza
-		// export del poliedro di partenza
-		Gedim::UCDUtilities utilities;
-			{
-				utilities.ExportPoints("./Cell0Ds.inp",
-									mesh.Cell0DsCoordinates);
-			}
-
-			{
-				utilities.ExportSegments("./Cell1Ds.inp",
-										mesh.Cell0DsCoordinates,
-										mesh.Cell1DsExtrema);
-			}
 
 		if (b != c) // TRIANGOLAZIONE DI CLASSE I
 		{
 			cout<<"triangolazione di classe I"<<endl;
 			unsigned int t_value = b + c; //valore che mi indica in quante parti dividere ogni lato del triangolo
 			Polyhedron mesh_triangolata1 = triangulateClass1(mesh, t_value); //triangolazione di classe 1 con parametro t_value
+			Polyhedron mesh_proiettata = projectPolyhedronOnSphere(mesh_triangolata1);
+			Poliedro_finale = mesh_proiettata;
 
-			// export del poliedro con triangolzione di classe 1
-			Gedim::UCDUtilities utilities;
-				{
-					utilities.ExportPoints("./Cell0Ds_T1.inp",
-										mesh_triangolata1.Cell0DsCoordinates);
-				}
-
-				{
-					utilities.ExportSegments("./Cell1Ds_T1.inp",
-											mesh_triangolata1.Cell0DsCoordinates,
-											mesh_triangolata1.Cell1DsExtrema);
-				}
 		}
 
 		else // TRIANGOLAZIONE DI CLASSE II
 		{
 			cout<<"triangolazione di classe II"<<endl;
-			/*
-			Polyhedron mesh_triangolata2 = triangulateClass2(mesh, b);
 
-			// export del poliedro con triangolzione di classe 1
-			Gedim::UCDUtilities utilities;
-				{
-					utilities.ExportPoints("./Cell0Ds_T2.inp",
-										mesh_triangolata2.Cell0DsCoordinates);
-				}
-
-				{
-					utilities.ExportSegments("./Cell1Ds_T2.inp",
-											mesh_triangolata2.Cell0DsCoordinates,
-											mesh_triangolata2.Cell1DsExtrema);
-				}
-			*/
 		}
+
 	}
+	
 
 	// CASO CUBO (DUALE DELL'OTTAEDRO) e CASO DODECAEDRO (DUALE DELL'ICOSAEDRO)
 	else if (p == 4 || p == 5)  
+	{
+		cout<<"p = "<< p <<endl;
+		Polyhedron mesh = buildPlatonicSolid(p); //definiamo il solido platonico di partenza
+
+		if (b != c) // TRIANGOLAZIONE DI CLASSE I
 		{
-			cout<<"p = "<< p <<endl;
-			Polyhedron mesh = buildPlatonicSolid(p); //definiamo il solido platonico di partenza
-
-			if (b != c) // TRIANGOLAZIONE DI CLASSE I
-			{
-				cout<<"triangolazione di classe I"<<endl;
-				unsigned int t_value = b + c; //valore che mi indica in quante parti dividere ogni lato del triangolo
-				Polyhedron mesh_triangolata1 = triangulateClass1(mesh, t_value); //triangolazione di classe 1 con parametro t_value
-					
-				Polyhedron mesh_dualizzata = Dualize(mesh_triangolata1);
-
-				// export del poliedro con dualizzazione
-				Gedim::UCDUtilities utilities;
-					{
-						utilities.ExportPoints("./Cell0Ds_D1.inp",
-											mesh_dualizzata.Cell0DsCoordinates);
-					}
-
-					{
-						utilities.ExportSegments("./Cell1Ds_D1.inp",
-												mesh_dualizzata.Cell0DsCoordinates,
-												mesh_dualizzata.Cell1DsExtrema);
-					}
-			}
-
-			else // TRIANGOLAZIONE DI CLASSE II
-			{
-				cout<<"triangolazione di classe II"<<endl;
-			}
+			cout<<"triangolazione di classe I"<<endl;
+			unsigned int t_value = b + c; //valore che mi indica in quante parti dividere ogni lato del triangolo
+			Polyhedron mesh_triangolata1 = triangulateClass1(mesh, t_value); //triangolazione di classe 1 con parametro t_value	
+			Polyhedron mesh_dualizzata = Dualize(mesh_triangolata1);
+			Polyhedron mesh_proiettata = projectPolyhedronOnSphere(mesh_dualizzata);
+			Poliedro_finale = mesh_proiettata;
+		}
+		else // TRIANGOLAZIONE DI CLASSE II
+		{
+			cout<<"triangolazione di classe II"<<endl;
 		}
 
+	}
+
+
+	
+	//Cammini minimi
+	
+	if(argc == 7)
+	{
+		vector<Gedim::UCDProperty<double>> points_properties;
+		vector<Gedim::UCDProperty<double>> segments_properties;
+		points_properties.reserve(1); //Proprietà: ShortPath
+		segments_properties.reserve(1);
+
+		vector<double> prop_vert(Poliedro_finale.NumCell0Ds, 0.0);
+		vector<double> prop_edges(Poliedro_finale.NumCell1Ds, 0.0);
+
+		//Riempimento point_properties
+		Gedim::UCDProperty<double> pointP;
+		pointP.Label = "ShortPath";
+		pointP.NumComponents = 1;
+		pointP.Data = prop_vert.data();
+		points_properties.push_back(pointP);
+
+		//Riempimento segments_properties
+		Gedim::UCDProperty<double> edgeP;
+		edgeP.Label = "ShortPath";
+		edgeP.NumComponents = 1;
+		edgeP.Data = prop_edges.data();
+		segments_properties.push_back(edgeP);
+
+
+		vector<unsigned int> path = Cammini_minimi(Poliedro_finale, v1, v2);
+	
+		//Riempimento prop_vert
+		for(unsigned int id_v : path) prop_vert[id_v] = 1.0; //imposta a 1.0 la proprietà dei vertici lungo il percorso
+
+		// Riempimento prop_edges
+		for(unsigned int i=0; i < path.size() - 1; i++)
+		{
+			unsigned int corrente = path[i];
+			unsigned int successivo = path[i+1];
+			std::unordered_set<unsigned int> edge_ref = {corrente, successivo};
+
+			// Itera sugli spigoli e, se lo spigolo è formato da corrente, successivo, imposta prop_edges[j] = 1.0
+			for(unsigned int j=0; j < Poliedro_finale.Cell1DsExtrema.cols(); j++)
+			{
+				Eigen::Vector2i edge = Poliedro_finale.Cell1DsExtrema.col(j);
+				unsigned int a = edge[0]; 
+				unsigned int b = edge[1];
+				if(edge_ref.count(a) + edge_ref.count(b) == 2) prop_edges[j] = 1.0;
+			}
+	
+		}
+		ExportPolyhedron(Poliedro_finale, points_properties, segments_properties);
+	}
+	else
+	{
+		ExportPolyhedron(Poliedro_finale);
+	}
+	
 	return 0;
+
+
 }
 
 

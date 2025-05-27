@@ -12,28 +12,24 @@ namespace PolyhedronLibrary {
 
 struct Polyhedron
 {
-    unsigned int NumCell0Ds = 0; // numero di vertici
-    std::vector<unsigned int> Cell0DsId = {}; // Cell0DsId è il vettore di ID dei vertici (dimensione 1 x NumCell0Ds)
-    Eigen::MatrixXd Cell0DsCoordinates = {}; // Cell0DCoordinates è la matrice delle coordinate (dimensione 3 x NumCell0Ds)
-    //std::map<unsigned int, vector<double>> IdCell0Ds = {}; // IdCell0Ds è un dizionario di id_punto - coordinate_punto
+    unsigned int NumCell0Ds = 0; // Numero di vertici
+    vector<unsigned int> Cell0DsId = {}; // Cell0DsId contiene gli id dei vertici
+    Eigen::MatrixXd Cell0DsCoordinates = {}; // Cell0DCoordinates è la matrice delle coordinate dei vertici
 
-
-    unsigned int NumCell1Ds = 0; // numero di lati
-    std::vector<unsigned int> Cell1DsId = {}; // Cell1DsId è il vettore di ID dei lati (dimensione 1 x NumCell1Ds)
-    Eigen::MatrixXi Cell1DsExtrema = {}; // Cell1DExtrema è la matrice contenente gli ID dei vertici iniziale e finale che caratterizzano il lato (dimensione 2 x NumCell1Ds)
+    unsigned int NumCell1Ds = 0; // Numero di lati
+    vector<unsigned int> Cell1DsId = {}; // Cell1DsId contiene gli id dei lati
+    MatrixXi Cell1DsExtrema = {}; // Cell1DExtrema è la matrice contenente gli id dei vertici iniziale e finale che caratterizzano il lato
     
-    unsigned int NumCell2Ds = 0; // numero di facce
-    std::vector<unsigned int> Cell2DsId = {}; // Cell2DsId è il vettore di ID delle facce (dimensione 1 x NumCell2Ds)
-    //visto che il numero di lati è variabile, uso un vettore dinamico
-    std::vector<std::vector<unsigned int>> Cell2DsVertices = {}; // Cell2DsVertices è una matrice con dimensione 1 x NumberCell2DVertices
-    std::vector<std::vector<unsigned int>> Cell2DsEdges = {}; // Cell2DsEdges è una matrice con dimensione 1 x NumberCell2DEdges
+    unsigned int NumCell2Ds = 0; // Numero di facce
+    vector<unsigned int> Cell2DsId = {}; // Cell2DsId contiene gli id delle facce
+    vector<vector<unsigned int>> Cell2DsVertices = {}; // Cell2DsVertices è la matrice contenente gli id dei vertici che caratterizzano la faccia
+    vector<vector<unsigned int>> Cell2DsEdges = {}; // Cell2DsEdges è la matrice contenente gli id dei lati che caratterizzano la faccia
 
-    unsigned int NumCell3Ds = 1; // 1 run ==> un solo poliedro
-    std::vector<unsigned int> Cell3DsId = {}; // Cell3DsId è il vettore di ID delle facce (dimensione 1 x NumCell2Ds)
-    //visto che il numero di lati è variabile, uso un vettore dinamico
-    std::vector<std::vector<unsigned int>> Cell3DsVertices = {}; // Cell2DsVertices è una matrice con dimensione 1 x NumberCell2DVertices
-    std::vector<std::vector<unsigned int>> Cell3DsEdges = {}; // Cell2DsEdges è una matrice con dimensione 1 x NumberCell2DEdges
-    std::vector<std::vector<unsigned int>> Cell3DsFaces = {}; // Cell2DsFaces è una matrice con dimensione 1 x NumberCell2DFaces
+    unsigned int NumCell3Ds = 1; // Un solo poliedro
+    unsigned int Cell3DsId = 0; // E' l'ID del poliedtro 
+    vector<vector<unsigned int>> Cell3DsVertices = {}; // Cell3DsVertices contiene gli id dei vertici del poliedro
+    vector<vector<unsigned int>> Cell3DsEdges = {}; // Cell3DsEdges contiene gli id dei lati del poliedro
+    vector<vector<unsigned int>> Cell3DsFaces = {}; // Cell3DsFaces contiene gli id delle facce del poliedro
 
 };
 
