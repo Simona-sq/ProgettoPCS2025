@@ -161,7 +161,6 @@ int main(int argc, char* argv[])
 				unsigned int b = edge[1];
 				if(edge_ref.count(a) + edge_ref.count(b) == 2) prop_edges[j] = 1.0;
 			}
-	
 		}
 
 		ExportPolyhedron(Poliedro_finale, points_properties, segments_properties);

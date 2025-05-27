@@ -300,11 +300,11 @@ Polyhedron triangulateClass2(const Polyhedron& P_class1)
     unsigned int nextEdgeId = 0;
     unsigned int nextFaceId = 0;
 
-    map<pair<unsigned int, unsigned int>, unsigned int> edgeMap; // per evitare duplicati spigoli
-    map<tuple<double, double, double>, unsigned int> pointMap;   // per evitare duplicati punti
+    map<pair<unsigned int, unsigned int>, unsigned int> edgeMap;
+    map<tuple<double, double, double>, unsigned int> pointMap;
 
-    // Copia i punti originali
-    for (unsigned int pid = 0; pid < P_class1.NumCell0Ds; ++pid)
+    // 1️⃣ Copia solo i punti originali
+    for (unsigned int pid = 0; pid < P_class1.NumCell0Ds; pid++)
     {
         Vector3d pt = P_class1.Cell0DsCoordinates.col(pid);
         P2.Cell0DsCoordinates.conservativeResize(3, nextPointId + 1);
@@ -314,15 +314,15 @@ Polyhedron triangulateClass2(const Polyhedron& P_class1)
         ++nextPointId;
     }
 
-    // Calcola baricentri delle facce
+    // 2️⃣ Calcola baricentri delle facce
     vector<unsigned int> faceBarycenterIds(P_class1.NumCell2Ds);
     for (unsigned int fid = 0; fid < P_class1.NumCell2Ds; ++fid)
     {
-        const vector<unsigned int>& faceVerts = P_class1.Cell2DsVertices[fid];
+        const auto& verts = P_class1.Cell2DsVertices[fid];
         Vector3d barycenter = Vector3d::Zero();
-        for (auto vid : faceVerts)
+        for (auto vid : verts)
             barycenter += P_class1.Cell0DsCoordinates.col(vid);
-        barycenter /= faceVerts.size();
+        barycenter /= verts.size();
 
         auto key = make_tuple(barycenter(0), barycenter(1), barycenter(2));
         if (pointMap.find(key) == pointMap.end())
@@ -340,13 +340,12 @@ Polyhedron triangulateClass2(const Polyhedron& P_class1)
         }
     }
 
-    // Calcola punti medi degli spigoli
+    // 3️⃣ Calcola punti medi degli spigoli
     vector<unsigned int> midEdgePointIds(P_class1.NumCell1Ds);
     for (unsigned int eid = 0; eid < P_class1.NumCell1Ds; ++eid)
     {
         unsigned int v0 = P_class1.Cell1DsExtrema(0, eid);
         unsigned int v1 = P_class1.Cell1DsExtrema(1, eid);
-
         Vector3d midpoint = 0.5 * (P_class1.Cell0DsCoordinates.col(v0) + P_class1.Cell0DsCoordinates.col(v1));
         auto key = make_tuple(midpoint(0), midpoint(1), midpoint(2));
         if (pointMap.find(key) == pointMap.end())
@@ -364,29 +363,15 @@ Polyhedron triangulateClass2(const Polyhedron& P_class1)
         }
     }
 
-    // Mappa lato -> facce adiacenti
-    map<pair<unsigned int, unsigned int>, vector<unsigned int>> edgeToFaces;
+    // 4️⃣ Costruisci solo i triangoli di classe 2 (senza copiare triangoli/lati di P_class1)
     for (unsigned int fid = 0; fid < P_class1.NumCell2Ds; ++fid)
     {
-        const vector<unsigned int>& faceEdges = P_class1.Cell2DsEdges[fid];
-        for (auto eid : faceEdges)
-        {
-            unsigned int v0 = P_class1.Cell1DsExtrema(0, eid);
-            unsigned int v1 = P_class1.Cell1DsExtrema(1, eid);
-            auto key = minmax(v0, v1);
-            edgeToFaces[key].push_back(fid);
-        }
-    }
-
-    // Costruzione triangoli di Classe II
-    for (unsigned int fid = 0; fid < P_class1.NumCell2Ds; ++fid)
-    {
-        const vector<unsigned int>& faceVerts = P_class1.Cell2DsVertices[fid];
+        const auto& faceVerts = P_class1.Cell2DsVertices[fid];
         unsigned int v0 = faceVerts[0];
         unsigned int v1 = faceVerts[1];
         unsigned int v2 = faceVerts[2];
 
-        const vector<unsigned int>& faceEdges = P_class1.Cell2DsEdges[fid];
+        const auto& faceEdges = P_class1.Cell2DsEdges[fid];
         unsigned int e0 = faceEdges[0];
         unsigned int e1 = faceEdges[1];
         unsigned int e2 = faceEdges[2];
@@ -397,33 +382,15 @@ Polyhedron triangulateClass2(const Polyhedron& P_class1)
 
         unsigned int b = faceBarycenterIds[fid];
 
-        // Triangoli da aggiungere
-        vector<vector<unsigned int>> candidateTriangles = {
-            {v0, m01, b},
-            {m01, v1, b},
-            {v1, m12, b},
-            {m12, v2, b},
-            {v2, m20, b},
-            {m20, v0, b}
+        // Triangoli della triangolazione nera (classe 2)
+        vector<vector<unsigned int>> triangles = {
+            {v0, m01, b}, {m01, v1, b},
+            {v1, m12, b}, {m12, v2, b},
+            {v2, m20, b}, {m20, v0, b}
         };
 
-        // Controllo se un lato è interno (due facce adiacenti)
-        auto isInternalEdge = [&](unsigned int eid) -> bool {
-            unsigned int vv0 = P_class1.Cell1DsExtrema(0, eid);
-            unsigned int vv1 = P_class1.Cell1DsExtrema(1, eid);
-            auto key = minmax(vv0, vv1);
-            return (edgeToFaces[key].size() == 2);
-        };
-
-        for (const auto& tri : candidateTriangles)
+        for (const auto& tri : triangles)
         {
-            // EVITO di creare il triangolo centrale che connetterebbe due baricentri tramite punto medio
-
-            // Nel tuo schema, questo triangolo non fa parte di candidateTriangles,
-            // quindi non lo aggiungo proprio.
-
-            // Quindi aggiungo sempre i triangoli esterni (6 per faccia)
-
             P2.Cell2DsVertices.push_back(tri);
             P2.Cell2DsId.push_back(nextFaceId++);
 
@@ -434,7 +401,8 @@ Polyhedron triangulateClass2(const Polyhedron& P_class1)
                 unsigned int c = tri[(k + 1) % 3];
                 auto key = minmax(a, c);
 
-                if (edgeMap.find(key) == edgeMap.end())
+                // Aggiungi il lato solo se è nuovo
+                if (!edgeMap.count(key))
                 {
                     edgeMap[key] = nextEdgeId++;
                     P2.Cell1DsId.push_back(edgeMap[key]);
@@ -445,7 +413,7 @@ Polyhedron triangulateClass2(const Polyhedron& P_class1)
         }
     }
 
-    // Aggiorna contatori e matrici
+    // 5️⃣ Aggiorna contatori e connessioni
     P2.NumCell0Ds = nextPointId;
     P2.NumCell1Ds = edgeMap.size();
     P2.NumCell2Ds = nextFaceId;
@@ -460,8 +428,6 @@ Polyhedron triangulateClass2(const Polyhedron& P_class1)
     P2.Cell3DsVertices = {P2.Cell0DsId};
     P2.Cell3DsEdges = {P2.Cell1DsId};
     P2.Cell3DsFaces = {P2.Cell2DsId};
-
-
 
     // Stampa di verifica
     std::cout << "NumCell0Ds: " << P2.NumCell0Ds << std::endl;

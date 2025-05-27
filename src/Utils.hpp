@@ -8,7 +8,6 @@ using namespace std;
 
 namespace PolyhedronLibrary
 {
-
 pair<vector<Vector3d>, vector<vector<unsigned int>>> getSolidData(unsigned int& q);
 
 Polyhedron buildPlatonicSolid(unsigned int& q);
@@ -28,5 +27,4 @@ void ExportPolyhedron(const Polyhedron& P,
 void Esporta_file(const Polyhedron& P);
 
 vector<unsigned int> Cammini_minimi(const Polyhedron& P, const int& v1, const int& v2);
-
 }
