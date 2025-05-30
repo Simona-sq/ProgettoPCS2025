@@ -301,8 +301,8 @@ Polyhedron triangulateClass2(const Polyhedron& P, const unsigned int& b)
     unsigned int nextEdgeId = 0;
     unsigned int nextFaceId = 0;
 
-    map<pair<unsigned int, unsigned int>, unsigned int> edgeMap; // mappa per controllare i duplicati
-    map<tuple<double, double, double>, unsigned int> pointMap;
+    map<pair<unsigned int, unsigned int>, unsigned int> edgeMap; // mappa per controllare i duplicati dei lati
+    map<tuple<double, double, double>, unsigned int> pointMap;   // mappa per controllare i duplicati dei lati
 
     // Copia i punti originali
     for (unsigned int pid = 0; pid < P1.NumCell0Ds; pid++) {
@@ -315,89 +315,174 @@ Polyhedron triangulateClass2(const Polyhedron& P, const unsigned int& b)
     }
 
     // Baricentri delle facce
-    for (unsigned int fid = 0; fid < P1.NumCell2Ds; ++fid) {
+    vector<unsigned int> faceBarycenterIds(P1.NumCell2Ds);
+    for (unsigned int fid = 0; fid < P1.NumCell2Ds; ++fid) 
+    {
         const auto& verts = P1.Cell2DsVertices[fid];
         Vector3d barycenter = Vector3d::Zero();
         for (auto vid : verts) barycenter += P1.Cell0DsCoordinates.col(vid);
         barycenter /= verts.size();
     
         auto key = make_tuple(barycenter(0), barycenter(1), barycenter(2));
-    
-        // Crea il baricentro
-        P2.Cell0DsCoordinates.conservativeResize(3, nextPointId + 1);
-        P2.Cell0DsCoordinates.col(nextPointId) = barycenter;
-        P2.Cell0DsId.push_back(nextPointId);
-        unsigned int barycenterId = nextPointId;
-        pointMap[key] = barycenterId;
-        ++nextPointId;
-    
-        // Collega il baricentro a ogni vertice della faccia
-        for (auto vid : verts) {
-            P2.Cell1DsId.push_back(nextEdgeId);
-            P2.Cell1DsExtrema.conservativeResize(2, nextEdgeId + 1);
-            P2.Cell1DsExtrema(0, nextEdgeId) = barycenterId;
-            P2.Cell1DsExtrema(1, nextEdgeId) = vid;
-            ++nextEdgeId;
+
+        if (!pointMap.count(key)) {
+            P2.Cell0DsCoordinates.conservativeResize(3, nextPointId + 1);
+            P2.Cell0DsCoordinates.col(nextPointId) = barycenter;
+            P2.Cell0DsId.push_back(nextPointId);
+            pointMap[key] = nextPointId;
+            faceBarycenterIds[fid] = nextPointId++;
+        } else {
+            faceBarycenterIds[fid] = pointMap[key];
         }
     }
-    P2.NumCell0Ds = nextPointId;
-    P2.NumCell1Ds = nextEdgeId;
 
-    //creazione mappa: id lato --> id facce a cui appartiene (per vedere se una faccia è interna o esterna)
 
-    map<unsigned int, vector<unsigned int>> facce_per_lati;
+    // Mappa: chiave = id faccia di P, valore = vettore di id facce di P1 contenute
+    std::map<unsigned int, std::vector<unsigned int>> facce_P_to_facce_P1;
+
+    // Numero di triangoli generati per ogni faccia P nella triangolazione 1
+    unsigned int num_tri_per_face = P1.Cell2DsVertices.size() / P.Cell2DsVertices.size();
 
     // Itera su tutte le facce del poliedro originale P
-    for (unsigned int fid_P = 0; fid_P < P.Cell2DsVertices.size(); ++fid_P)
+    for (unsigned int fid_P = 0; fid_P < P.Cell2DsVertices.size(); ++fid_P) 
     {
-        const auto face_P = P.Cell2DsVertices[fid_P];
-    
-        // Itera su tutti i triangoli di P1
-        for (unsigned int fid_P1 = 0; fid_P1 < P1.Cell2DsVertices.size(); ++fid_P1) {
-            const auto triangle_P1 = P1.Cell2DsVertices[fid_P1];
-    
-            // Itera su ciascun lato del triangolo
-            for (int i = 0; i < 3; ++i) {
-                unsigned int v1 = triangle_P1[i];
-                unsigned int v2 = triangle_P1[(i + 1) % 3];
-    
-                // Ottieni l'id del lato da P1.Cell1DsId, cercando quale lato ha come estremi v1,v2
-                // Devi iterare su P1.Cell1DsExtrema per trovare il lato corrispondente
-                unsigned int edgeId = -1;  // valore segnaposto
-                for (unsigned int eid = 0; eid < P1.Cell1DsExtrema.cols(); ++eid) {
-                    unsigned int e1 = P1.Cell1DsExtrema(0, eid);
-                    unsigned int e2 = P1.Cell1DsExtrema(1, eid);
-                    if ((e1 == v1 && e2 == v2) || (e1 == v2 && e2 == v1)) {
-                        edgeId = eid;
-                        break;
+        unsigned int start_tri = fid_P * num_tri_per_face;
+        unsigned int end_tri = start_tri + num_tri_per_face;
+
+        for (unsigned int fid_P1 = start_tri; fid_P1 < end_tri; ++fid_P1) 
+        {
+            facce_P_to_facce_P1[fid_P].push_back(fid_P1);
+        }
+    }
+
+    // Mappa: chiave = id inizio e fine del vertice, valore = id lato
+    std::map<std::pair<unsigned int, unsigned int>, unsigned int> edgeKeyToId;
+    for (unsigned int eid = 0; eid < P1.Cell1DsId.size(); ++eid) {
+        unsigned int v1 = P1.Cell1DsExtrema(0, eid);
+        unsigned int v2 = P1.Cell1DsExtrema(1, eid);
+        edgeKeyToId[std::minmax(v1, v2)] = P1.Cell1DsId[eid];
+    }
+
+    // Itera su tutti i triangoli di P1
+    for (const auto& [fid_P, facceP1] : facce_P_to_facce_P1) 
+    {
+        // Mappa: chiave = id lato di P1, valore = vettore di id delle facce di P1 che lo contengono
+        std::map<unsigned int, std::vector<unsigned int>> facce_per_lati;
+
+        for (unsigned int fid_P1 : facceP1) {
+            const std::vector<unsigned int>& edges = P1.Cell2DsEdges[fid_P1];
+
+            for (unsigned int edge_id : edges) {
+                auto it = facce_per_lati.find(edge_id);
+                if (it != facce_per_lati.end()) {
+                    std::vector<unsigned int>& faces_for_edge = it->second;
+                    // aggiungo fid_P1 se non è già presente
+                    if (std::find(faces_for_edge.begin(), faces_for_edge.end(), fid_P1) == faces_for_edge.end()) {
+                        faces_for_edge.push_back(fid_P1);
                     }
-                }
-    
-                if (edgeId != (unsigned int)-1) {
-                    auto& faces = facce_per_lati[edgeId];
-                    if (std::find(faces.begin(), faces.end(), fid_P) == faces.end()) {
-                        faces.push_back(fid_P);
-                    }
+                } else {
+                    facce_per_lati[edge_id] = { fid_P1 };
                 }
             }
         }
-    }
 
-    //stampa facce_per_lati
-     std::cout << "Contenuto della mappa facce_per_lati:\n";
-    for (const auto& entry : facce_per_lati)
-    {
-        unsigned int edgeId = entry.first;
-        const std::vector<unsigned int>& faces = entry.second;
+        for (const auto& [edge_id, faces] : facce_per_lati) 
+            {
+                std::cout << "Lato " << edge_id << " appartiene alle facce: ";
+                for (unsigned int fid : faces) 
+                {
+                    std::cout << fid << " ";
+                }
+                std::cout << std::endl;
+            }
+        //distinzione tra caso in cui il lato appartiene ad una sola faccia e caso in cui il lato appartiene a due facce
+        //caso in cui il lato appartiene ad una sola faccia
+        // Mappa temporanea: chiave = id faccia P1, valore = vector dei punti medi
+        std::map<unsigned int, std::vector<unsigned int>> faceP1_to_midpoints;
 
-        std::cout << "Lato ID " << edgeId << " -> Facce: ";
-        for (unsigned int fid : faces) {
-            std::cout << fid << " ";
+        for (const auto& entry : facce_per_lati)
+        {
+            unsigned int edge_id = entry.first;
+            const std::vector<unsigned int> faces = entry.second;
+
+            if (faces.size() == 1) {
+                // Caso: il lato appartiene a una sola faccia
+                unsigned int fid_P1 = faces[0];
+
+                // Ottieni i vertici del lato
+                unsigned int v1 = P1.Cell1DsExtrema(0, edge_id);
+                unsigned int v2 = P1.Cell1DsExtrema(1, edge_id);
+
+                // Calcola il punto medio del lato
+                Vector3d point1 = P1.Cell0DsCoordinates.col(v1);
+                Vector3d point2 = P1.Cell0DsCoordinates.col(v2);
+                Vector3d midpoint = 0.5 * (point1 + point2);
+
+                // Controlla se il punto medio esiste già in P2
+                bool exists = false;
+                unsigned int midpoint_id = 0;
+                for (unsigned int pid = 0; pid < P2.Cell0DsCoordinates.cols(); ++pid) {
+                    Vector3d existing = P2.Cell0DsCoordinates.col(pid);
+                    if ((midpoint - existing).norm() < 1e-8) {
+                        exists = true;
+                        midpoint_id = pid;
+                        break;
+                    }
+                }
+
+                if (!exists) {
+                    midpoint_id = P2.Cell0DsCoordinates.cols();
+                    P2.Cell0DsCoordinates.conservativeResize(3, midpoint_id + 1);
+                    P2.Cell0DsCoordinates.col(midpoint_id) = midpoint;
+                    P2.Cell0DsId.push_back(midpoint_id);
+                }
+
+                // Salva il punto medio associato alla faccia fid_P1
+                faceP1_to_midpoints[fid_P1].push_back(midpoint_id);
+            }
+            // Caso: lato appartiene a due facce (da gestire se necessario)
+            else if (faces.size() == 2) {
+                cout << "caso 2" << endl;
+            }
         }
-        std::cout << std::endl;
+
+        // Ora collega ciascun baricentro ai punti medi della stessa faccia
+        for (const auto& entry : faceP1_to_midpoints) {
+            unsigned int fid_P1 = entry.first;
+            unsigned int barycenter_id = faceBarycenterIds[fid_P1];
+            const std::vector<unsigned int>& midpoints = entry.second;
+
+            for (unsigned int midpoint_id : midpoints) {
+                // Controllo duplicati: cerca se il lato esiste già in P2
+                bool edge_exists = false;
+                for (unsigned int eid = 0; eid < P2.Cell1DsId.size(); ++eid) {
+                    unsigned int e_v1 = P2.Cell1DsExtrema(0, eid);
+                    unsigned int e_v2 = P2.Cell1DsExtrema(1, eid);
+                    if ((e_v1 == barycenter_id && e_v2 == midpoint_id) ||
+                        (e_v1 == midpoint_id && e_v2 == barycenter_id)) {
+                        edge_exists = true;
+                        break;
+                    }
+                }
+
+                if (!edge_exists) {
+                    unsigned int new_edge_id = P2.Cell1DsId.size();
+                    P2.Cell1DsId.push_back(new_edge_id);
+                    P2.Cell1DsExtrema.conservativeResize(2, new_edge_id + 1);
+                    P2.Cell1DsExtrema(0, new_edge_id) = barycenter_id;
+                    P2.Cell1DsExtrema(1, new_edge_id) = midpoint_id;
+                }
+            }
+        }
+
+
     }
 
-
+    std::cout << "faceBarycenterIds: [ ";
+    for (unsigned int id : faceBarycenterIds) {
+        std::cout << id << " ";
+    }
+    std::cout << "]" << std::endl;
 
 
     
@@ -538,8 +623,6 @@ Polyhedron triangulateClass2(const Polyhedron& P, const unsigned int& b)
             std::cout << f << " ";
         std::cout << std::endl;
     }
-    
-    
 
     return P2;
 }
