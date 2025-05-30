@@ -14,7 +14,7 @@ Polyhedron buildPlatonicSolid(unsigned int& q);
 
 Polyhedron triangulateClass1(const Polyhedron& P, const unsigned int& t_value);
 
-Polyhedron triangulateClass2(const Polyhedron& P);
+Polyhedron triangulateClass2(const Polyhedron& P, const unsigned int& b);
 
 Polyhedron Dualize(const Polyhedron& P_normale);
 
@@ -26,5 +26,5 @@ void ExportPolyhedron(const Polyhedron& P,
 
 void Esporta_file(const Polyhedron& P);
 
-vector<unsigned int> Cammini_minimi(const Polyhedron& P, const int& v1, const int& v2);
+vector<unsigned int> Cammini_minimi(const Polyhedron& P, const unsigned int& v1, const unsigned int& v2);
 }

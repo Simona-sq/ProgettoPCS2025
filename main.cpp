@@ -11,6 +11,7 @@ using namespace PolyhedronLibrary;
 
 int main(int argc, char* argv[])
 {
+	
 	unsigned int p = 0;
 	unsigned int q = 0;
 	unsigned int b = 0;
@@ -73,8 +74,8 @@ int main(int argc, char* argv[])
 		else // TRIANGOLAZIONE DI CLASSE II
 		{
 			cout<<"triangolazione di classe II"<<endl;
-			Polyhedron mesh_triangolata1 = triangulateClass1(mesh, b); //triangolazione di classe 1 con parametro t_value
-			Polyhedron mesh_triangolata2 = triangulateClass2(mesh_triangolata1);
+			 //triangolazione di classe 1 con parametro t_value
+			Polyhedron mesh_triangolata2 = triangulateClass2(mesh, b);
 			Polyhedron mesh_proiettata = projectPolyhedronOnSphere(mesh_triangolata2);
 			Poliedro_finale = mesh_triangolata2;
 		}
@@ -99,8 +100,7 @@ int main(int argc, char* argv[])
 		else // TRIANGOLAZIONE DI CLASSE II
 		{
 			cout<<"triangolazione di classe II"<<endl;
-			Polyhedron mesh_triangolata1 = triangulateClass1(mesh, b); //triangolazione di classe 1 con parametro t_value
-			Polyhedron mesh_triangolata2 = triangulateClass2(mesh_triangolata1);
+			Polyhedron mesh_triangolata2 = triangulateClass2(mesh, b);
 			Polyhedron mesh_dualizzata = Dualize(mesh_triangolata2);
 			Polyhedron mesh_proiettata = projectPolyhedronOnSphere(mesh_dualizzata);
 			Poliedro_finale = mesh_dualizzata;
@@ -175,7 +175,4 @@ int main(int argc, char* argv[])
 
 }
 
-
-		
-	
 

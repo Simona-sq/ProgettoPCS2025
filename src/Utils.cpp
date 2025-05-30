@@ -12,9 +12,9 @@
 using namespace std;
 
 using namespace Eigen;
-namespace PolyhedronLibrary
-{
 
+namespace PolyhedronLibrary 
+{
 // ***************************************************************************
 // Definisco i vertici e le facce del solido platonico di partenza
 pair<vector<Vector3d>, vector<vector<unsigned int>>> getSolidData(unsigned int& q) 
@@ -292,89 +292,141 @@ Polyhedron triangulateClass1(const Polyhedron& P, const unsigned int& t_value)
 
 // ***************************************************************************
 // Funzione per la triangolazione di classe 2
-Polyhedron triangulateClass2(const Polyhedron& P_class1)
+Polyhedron triangulateClass2(const Polyhedron& P, const unsigned int& b) 
 {
+    Polyhedron P1 = triangulateClass1(P,b);
     Polyhedron P2;
 
     unsigned int nextPointId = 0;
     unsigned int nextEdgeId = 0;
     unsigned int nextFaceId = 0;
 
-    map<pair<unsigned int, unsigned int>, unsigned int> edgeMap;
+    map<pair<unsigned int, unsigned int>, unsigned int> edgeMap; // mappa per controllare i duplicati
     map<tuple<double, double, double>, unsigned int> pointMap;
 
-    // Copia solo i punti originali
-    for (unsigned int pid = 0; pid < P_class1.NumCell0Ds; pid++)
-    {
-        Vector3d pt = P_class1.Cell0DsCoordinates.col(pid);
+    // Copia i punti originali
+    for (unsigned int pid = 0; pid < P1.NumCell0Ds; pid++) {
+        Vector3d pt = P1.Cell0DsCoordinates.col(pid);
         P2.Cell0DsCoordinates.conservativeResize(3, nextPointId + 1);
         P2.Cell0DsCoordinates.col(nextPointId) = pt;
         P2.Cell0DsId.push_back(nextPointId);
-        pointMap[make_tuple(pt(0), pt(1), pt(2))] = nextPointId;
+        pointMap[{pt(0), pt(1), pt(2)}] = nextPointId;
         ++nextPointId;
     }
 
-    // Calcola baricentri delle facce
-    vector<unsigned int> faceBarycenterIds(P_class1.NumCell2Ds);
-    for (unsigned int fid = 0; fid < P_class1.NumCell2Ds; fid++)
-    {
-        const auto verts = P_class1.Cell2DsVertices[fid];
+    // Baricentri delle facce
+    for (unsigned int fid = 0; fid < P1.NumCell2Ds; ++fid) {
+        const auto& verts = P1.Cell2DsVertices[fid];
         Vector3d barycenter = Vector3d::Zero();
-        for (auto vid : verts)
-            barycenter += P_class1.Cell0DsCoordinates.col(vid);
+        for (auto vid : verts) barycenter += P1.Cell0DsCoordinates.col(vid);
         barycenter /= verts.size();
-
+    
         auto key = make_tuple(barycenter(0), barycenter(1), barycenter(2));
-        if (pointMap.find(key) == pointMap.end())
-        {
-            P2.Cell0DsCoordinates.conservativeResize(3, nextPointId + 1);
-            P2.Cell0DsCoordinates.col(nextPointId) = barycenter;
-            P2.Cell0DsId.push_back(nextPointId);
-            faceBarycenterIds[fid] = nextPointId;
-            pointMap[key] = nextPointId;
-            ++nextPointId;
+    
+        // Crea il baricentro
+        P2.Cell0DsCoordinates.conservativeResize(3, nextPointId + 1);
+        P2.Cell0DsCoordinates.col(nextPointId) = barycenter;
+        P2.Cell0DsId.push_back(nextPointId);
+        unsigned int barycenterId = nextPointId;
+        pointMap[key] = barycenterId;
+        ++nextPointId;
+    
+        // Collega il baricentro a ogni vertice della faccia
+        for (auto vid : verts) {
+            P2.Cell1DsId.push_back(nextEdgeId);
+            P2.Cell1DsExtrema.conservativeResize(2, nextEdgeId + 1);
+            P2.Cell1DsExtrema(0, nextEdgeId) = barycenterId;
+            P2.Cell1DsExtrema(1, nextEdgeId) = vid;
+            ++nextEdgeId;
         }
-        else
-        {
-            faceBarycenterIds[fid] = pointMap[key];
+    }
+    P2.NumCell0Ds = nextPointId;
+    P2.NumCell1Ds = nextEdgeId;
+
+    //creazione mappa: id lato --> id facce a cui appartiene (per vedere se una faccia è interna o esterna)
+
+    map<unsigned int, vector<unsigned int>> facce_per_lati;
+
+    // Itera su tutte le facce del poliedro originale P
+    for (unsigned int fid_P = 0; fid_P < P.Cell2DsVertices.size(); ++fid_P)
+    {
+        const auto face_P = P.Cell2DsVertices[fid_P];
+    
+        // Itera su tutti i triangoli di P1
+        for (unsigned int fid_P1 = 0; fid_P1 < P1.Cell2DsVertices.size(); ++fid_P1) {
+            const auto triangle_P1 = P1.Cell2DsVertices[fid_P1];
+    
+            // Itera su ciascun lato del triangolo
+            for (int i = 0; i < 3; ++i) {
+                unsigned int v1 = triangle_P1[i];
+                unsigned int v2 = triangle_P1[(i + 1) % 3];
+    
+                // Ottieni l'id del lato da P1.Cell1DsId, cercando quale lato ha come estremi v1,v2
+                // Devi iterare su P1.Cell1DsExtrema per trovare il lato corrispondente
+                unsigned int edgeId = -1;  // valore segnaposto
+                for (unsigned int eid = 0; eid < P1.Cell1DsExtrema.cols(); ++eid) {
+                    unsigned int e1 = P1.Cell1DsExtrema(0, eid);
+                    unsigned int e2 = P1.Cell1DsExtrema(1, eid);
+                    if ((e1 == v1 && e2 == v2) || (e1 == v2 && e2 == v1)) {
+                        edgeId = eid;
+                        break;
+                    }
+                }
+    
+                if (edgeId != (unsigned int)-1) {
+                    auto& faces = facce_per_lati[edgeId];
+                    if (std::find(faces.begin(), faces.end(), fid_P) == faces.end()) {
+                        faces.push_back(fid_P);
+                    }
+                }
+            }
         }
     }
 
-    // Calcola punti medi degli spigoli
-    vector<unsigned int> midEdgePointIds(P_class1.NumCell1Ds);
-    for (unsigned int eid = 0; eid < P_class1.NumCell1Ds; eid++)
+    //stampa facce_per_lati
+     std::cout << "Contenuto della mappa facce_per_lati:\n";
+    for (const auto& entry : facce_per_lati)
     {
-        unsigned int v0 = P_class1.Cell1DsExtrema(0, eid);
-        unsigned int v1 = P_class1.Cell1DsExtrema(1, eid);
-        Vector3d midpoint = 0.5 * (P_class1.Cell0DsCoordinates.col(v0) + P_class1.Cell0DsCoordinates.col(v1));
+        unsigned int edgeId = entry.first;
+        const std::vector<unsigned int>& faces = entry.second;
+
+        std::cout << "Lato ID " << edgeId << " -> Facce: ";
+        for (unsigned int fid : faces) {
+            std::cout << fid << " ";
+        }
+        std::cout << std::endl;
+    }
+
+
+
+
+    
+    /*// Punti medi degli spigoli
+    vector<unsigned int> midEdgePointIds(P1.NumCell1Ds);
+    for (unsigned int eid = 0; eid < P1.NumCell1Ds; ++eid) {
+        unsigned int v0 = P1.Cell1DsExtrema(0, eid);
+        unsigned int v1 = P1.Cell1DsExtrema(1, eid);
+        Vector3d midpoint = 0.5 * (P1.Cell0DsCoordinates.col(v0) + P1.Cell0DsCoordinates.col(v1));
+
         auto key = make_tuple(midpoint(0), midpoint(1), midpoint(2));
-        if (pointMap.find(key) == pointMap.end())
-        {
+        if (!pointMap.count(key)) {
             P2.Cell0DsCoordinates.conservativeResize(3, nextPointId + 1);
             P2.Cell0DsCoordinates.col(nextPointId) = midpoint;
             P2.Cell0DsId.push_back(nextPointId);
-            midEdgePointIds[eid] = nextPointId;
             pointMap[key] = nextPointId;
-            ++nextPointId;
-        }
-        else
-        {
+            midEdgePointIds[eid] = nextPointId++;
+        } else {
             midEdgePointIds[eid] = pointMap[key];
         }
     }
 
-    // Costruisci solo i triangoli di classe 2
-    for (unsigned int fid = 0; fid < P_class1.NumCell2Ds; fid++)
-    {
-        const auto faceVerts = P_class1.Cell2DsVertices[fid];
-        unsigned int v0 = faceVerts[0];
-        unsigned int v1 = faceVerts[1];
-        unsigned int v2 = faceVerts[2];
+    // Triangoli attorno ai vertici (no triangolo centrale)
+    for (unsigned int fid = 0; fid < P1.NumCell2Ds; ++fid) {
+        const auto& verts = P1.Cell2DsVertices[fid];
+        const auto& edges = P1.Cell2DsEdges[fid];
 
-        const auto faceEdges = P_class1.Cell2DsEdges[fid];
-        unsigned int e0 = faceEdges[0];
-        unsigned int e1 = faceEdges[1];
-        unsigned int e2 = faceEdges[2];
+        unsigned int v0 = verts[0], v1 = verts[1], v2 = verts[2];
+        unsigned int e0 = edges[0], e1 = edges[1], e2 = edges[2];
 
         unsigned int m01 = midEdgePointIds[e0];
         unsigned int m12 = midEdgePointIds[e1];
@@ -382,45 +434,36 @@ Polyhedron triangulateClass2(const Polyhedron& P_class1)
 
         unsigned int b = faceBarycenterIds[fid];
 
-        // Triangoli della triangolazione nera (classe 2)
         vector<vector<unsigned int>> triangles = {
-            {v0, m01, b}, {m01, v1, b},
-            {v1, m12, b}, {m12, v2, b},
-            {v2, m20, b}, {m20, v0, b}
+            {v0, m01, b}, {v1, m12, b}, {v2, m20, b}
         };
 
-        for (const auto tri : triangles)
-        {
+        for (const auto& tri : triangles) {
             P2.Cell2DsVertices.push_back(tri);
             P2.Cell2DsId.push_back(nextFaceId++);
 
             vector<unsigned int> triEdgeIds;
-            for (int k = 0; k < 3; ++k)
-            {
+            for (int k = 0; k < 3; ++k) {
                 unsigned int a = tri[k];
-                unsigned int c = tri[(k + 1) % 3];
-                auto key = minmax(a, c);
-
-                // Aggiungi il lato solo se è nuovo
-                if (!edgeMap.count(key))
-                {
-                    edgeMap[key] = nextEdgeId++;
-                    P2.Cell1DsId.push_back(edgeMap[key]);
+                unsigned int b = tri[(k + 1) % 3];
+                auto ek = minmax(a, b);
+                if (!edgeMap.count(ek)) {
+                    edgeMap[ek] = nextEdgeId++;
+                    P2.Cell1DsId.push_back(edgeMap[ek]);
                 }
-                triEdgeIds.push_back(edgeMap[key]);
+                triEdgeIds.push_back(edgeMap[ek]);
             }
             P2.Cell2DsEdges.push_back(triEdgeIds);
         }
     }
 
-    // Aggiorna contatori e connessioni
+    // Assegnamento delle estremita' dei lati
     P2.NumCell0Ds = nextPointId;
     P2.NumCell1Ds = edgeMap.size();
     P2.NumCell2Ds = nextFaceId;
 
     P2.Cell1DsExtrema = MatrixXi(2, P2.NumCell1Ds);
-    for (const auto [key, eid] : edgeMap)
-    {
+    for (const auto& [key, eid] : edgeMap) {
         P2.Cell1DsExtrema(0, eid) = key.first;
         P2.Cell1DsExtrema(1, eid) = key.second;
     }
@@ -429,12 +472,15 @@ Polyhedron triangulateClass2(const Polyhedron& P_class1)
     P2.Cell3DsEdges = {P2.Cell1DsId};
     P2.Cell3DsFaces = {P2.Cell2DsId};
 
+
+    */
+
     // Stampa di verifica
     std::cout << "NumCell0Ds: " << P2.NumCell0Ds << std::endl;
     std::cout << "NumCell1Ds: " << P2.NumCell1Ds << std::endl;
     std::cout << "NumCell2Ds: " << P2.NumCell2Ds << std::endl;
     std::cout << "NumCell3Ds: " << P2.NumCell3Ds << std::endl;
-
+    
     std::cout << "Cell0DsId (ID dei vertici):" << std::endl;
     for (auto id : P2.Cell0DsId)
         std::cout << id << " ";
@@ -492,6 +538,8 @@ Polyhedron triangulateClass2(const Polyhedron& P_class1)
             std::cout << f << " ";
         std::cout << std::endl;
     }
+    
+    
 
     return P2;
 }
@@ -735,7 +783,7 @@ void Esporta_file(const Polyhedron& P)
 }
 
 // ***************************************************************************
-vector<unsigned int> Cammini_minimi(const Polyhedron& P, const int& v1, const int& v2)
+vector<unsigned int> Cammini_minimi(const Polyhedron& P, const unsigned int& v1, const unsigned int& v2)
 {
     const MatrixXi edges = P.Cell1DsExtrema;
     const MatrixXd coords = P.Cell0DsCoordinates;
@@ -809,6 +857,5 @@ vector<unsigned int> Cammini_minimi(const Polyhedron& P, const int& v1, const in
 
     return path;
 }
-
-
 }
+
