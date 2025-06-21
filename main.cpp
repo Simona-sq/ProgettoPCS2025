@@ -11,7 +11,6 @@ using namespace PolyhedronLibrary;
 
 int main(int argc, char* argv[])
 {
-	
 	unsigned int p = 0;
 	unsigned int q = 0;
 	unsigned int b = 0;
@@ -168,6 +167,7 @@ int main(int argc, char* argv[])
 	{
 		ExportPolyhedron(Poliedro_finale);
 	}
+	cout << "I dati del solido geodetico sono stati salvati nei file: 'Cell0Ds.txt','Cell1Ds.txt','Cell2Ds.txt','Cell3Ds.txt' " << endl;
 	
 	return 0;
 

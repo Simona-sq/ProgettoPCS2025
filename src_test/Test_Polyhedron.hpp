@@ -4,6 +4,7 @@
 #include <vector>
 #include <gtest/gtest.h>
 #include <fstream>
+//#include <cstdio>
 
 #include "Utils.hpp"
 #include "Eigen/Eigen"
@@ -162,49 +163,147 @@ namespace PolyhedronLibrary {
         EXPECT_EQ(projected.Cell0DsId, P.Cell0DsId);
     }
 
+
     
     // G TEST PER ExportPolyhedron su un segmento di due punti
     TEST(ExportPolyhedronTest, MinimalSegmentExportWithoutProperties) {
-        // Crea il numero minimo di elementi salvabili sui file .inp (2 punti e 1 segmento)
         Polyhedron polyhedron;
 
-        // Aggiungi due vertici
+        // Vertici
         polyhedron.Cell0DsCoordinates.resize(3, 2);
         polyhedron.Cell0DsCoordinates.col(0) << 0.0, 0.0, 0.0;
         polyhedron.Cell0DsCoordinates.col(1) << 1.0, 0.0, 0.0;
         polyhedron.Cell0DsId = {0, 1};
         polyhedron.NumCell0Ds = 2;
 
-        // Aggiungi un segmento che collega i due vertici
+        // Segmento
         polyhedron.Cell1DsExtrema.resize(2, 1);
         polyhedron.Cell1DsExtrema(0, 0) = 0;
         polyhedron.Cell1DsExtrema(1, 0) = 1;
         polyhedron.Cell1DsId = {0};
         polyhedron.NumCell1Ds = 1;
 
+        // Facce (vuote)
+        polyhedron.Cell2DsVertices = {};
+        polyhedron.Cell2DsEdges = {};
         polyhedron.Cell2DsId = {};
         polyhedron.NumCell2Ds = 0;
-        polyhedron.Cell3DsId = {};
-        polyhedron.NumCell3Ds = 0;
 
-        // Chiama ExportPolyhedron SENZA proprietà
+        // Poliedro 3D (deve essere inizializzato anche se non ha significato)
+        polyhedron.Cell3DsVertices = {{0, 1}};
+        polyhedron.Cell3DsEdges = {{0}};
+        polyhedron.Cell3DsFaces = {{}};
+        polyhedron.Cell3DsId = 0;
+        polyhedron.NumCell3Ds = 1;
+
+        // Esportazione
         ExportPolyhedron(polyhedron, {}, {});
 
-        // Verifica che i file .inp siano stati creati e non siano vuoti
+        // Controlli su file
         std::ifstream file0("Cell0Ds.inp");
         ASSERT_TRUE(file0.is_open()) << "Cell0Ds.inp non è stato creato";
-        ASSERT_NE(file0.peek(), std::ifstream::traits_type::eof()) << "Cell0Ds.inp è vuoto";
+
         // .peek() = prende il primo carattere del file, NE = not equal
+        ASSERT_NE(file0.peek(), std::ifstream::traits_type::eof()) << "Cell0Ds.inp è vuoto";
         file0.close();
 
         std::ifstream file1("Cell1Ds.inp");
-        ASSERT_TRUE(file1.is_open()) << "Cell1Ds.inp non è stato creato";
-        ASSERT_NE(file1.peek(), std::ifstream::traits_type::eof()) << "Cell1Ds.inp è vuoto";
+        ASSERT_TRUE(file1.is_open()) << "File non aperto";
+        ASSERT_NE(file1.peek(), -1) << "File vuoto";
         file1.close();
 
-        // Svota i file generati
+        // Pulizia
         std::remove("Cell0Ds.inp");
         std::remove("Cell1Ds.inp");
+        std::remove("Cell0Ds.txt");
+        std::remove("Cell1Ds.txt");
+        std::remove("Cell2Ds.txt");
+        std::remove("Cell3Ds.txt");
+    }
+    
+
+    // G TEST PER Esporta_file su un segmento di due punti
+    TEST(EsportaFileTest, GeneratesCorrectOutputFiles) {
+        // Crea un polyhedron minimale: 2 vertici, 1 lato, 1 faccia, 1 cella
+        Polyhedron P;
+    
+        // Vertici
+        P.Cell0DsCoordinates.resize(3, 2);
+        P.Cell0DsCoordinates.col(0) << 0.0, 0.0, 0.0;
+        P.Cell0DsCoordinates.col(1) << 1.0, 0.0, 0.0;
+        P.Cell0DsId = {0, 1};
+        P.NumCell0Ds = 2;
+    
+        // Lato
+        P.Cell1DsExtrema.resize(2, 1);
+        P.Cell1DsExtrema(0, 0) = 0;
+        P.Cell1DsExtrema(1, 0) = 1;
+        P.Cell1DsId = {0};
+        P.NumCell1Ds = 1;
+    
+        // Faccia
+        P.Cell2DsVertices = {{0, 1}};
+        P.Cell2DsEdges = {{0}};
+        P.Cell2DsId = {0};
+        P.NumCell2Ds = 1;
+    
+        // Cella 3D
+        P.Cell3DsVertices = {{0, 1}};
+        P.Cell3DsEdges = {{0}};
+        P.Cell3DsFaces = {{0}};
+        P.Cell3DsId = 0;
+        P.NumCell3Ds = 1;
+    
+        // Chiamata alla funzione da testare
+        Esporta_file(P);
+    
+        // Verifica esistenza e non-vuotezza dei file
+        const std::vector<std::string> files = {
+            "Cell0Ds.txt", "Cell1Ds.txt", "Cell2Ds.txt", "Cell3Ds.txt"
+        };
+    
+        for (const auto& filename : files) {
+            std::ifstream file(filename);
+            ASSERT_TRUE(file.is_open()) << "Il file " << filename << " non è stato creato";
+            ASSERT_NE(file.peek(), -1) << "File vuoto";
+            file.close();
+        }
+    
+        // Pulizia finale
+        for (const auto& filename : files) {
+            std::remove(filename.c_str());
+        }
+    }
+
+    // G TEST PER cammini_minimi dal vertice 0 al vertice 2
+    TEST(CamminiMinimiTest, PathLength5OnTriangulatedTetrahedronClass1T2)
+    {
+        // 1. Costruzione tetraedro e triangolazione t=2
+        unsigned int q = 4;
+        Polyhedron P = buildPlatonicSolid(q);
+        unsigned int t = 4;
+        Polyhedron triangulated = triangulateClass1(P, t);
+        Polyhedron dualized = Dualize(triangulated);
+
+        cout << dualized.NumCell0Ds << endl;
+    
+        unsigned int v_start = 10;
+        unsigned int v_end = 58;
+    
+        // 3. Trova il cammino minimo
+        std::vector<unsigned int> path = Cammini_minimi(dualized, v_start, v_end);
+
+        std::cout << "Cammino: ";
+        for (auto id : path) std::cout << id << " ";
+        std::cout << std::endl;
+    
+        // 4. Verifiche sul cammino
+        ASSERT_FALSE(path.empty()) << "Cammino non trovato.";
+        EXPECT_EQ(path.size() - 1, 3) << "Il cammino deve attraversare 3 lati (4 vertici).";
+
+        // 7. Verifica che la sequenza di vertici sia quella attesa (ipotizziamo un cammino noto)
+        std::vector<unsigned int> expected_path = {10, 9, 57, 58}; 
+        EXPECT_EQ(path, expected_path) << "La sequenza del cammino minimo non è quella attesa";
     }
 
 

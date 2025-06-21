@@ -819,7 +819,6 @@ void Esporta_file(const Polyhedron& P)
 
     ofile4.close();
 
-    cout << "I dati del solido geodetico sono stati salvati nei file: 'Cell0Ds.txt','Cell1Ds.txt','Cell2Ds.txt','Cell3Ds.txt' " << endl;
 }
 
 // ***************************************************************************
