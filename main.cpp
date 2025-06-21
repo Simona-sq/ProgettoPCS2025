@@ -64,7 +64,7 @@ int main(int argc, char* argv[])
 
 		if (b != c) // TRIANGOLAZIONE DI CLASSE I
 		{
-			cout<<"triangolazione di classe I"<<endl;
+			cout<<"Eseguiamo la triangolazione di classe I"<<endl;
 			unsigned int t_value = b + c; //valore che mi indica in quante parti dividere ogni lato del triangolo
 			Polyhedron mesh_triangolata1 = triangulateClass1(mesh, t_value); //triangolazione di classe 1 con parametro t_value
 			Polyhedron mesh_proiettata = projectPolyhedronOnSphere(mesh_triangolata1);
@@ -73,11 +73,10 @@ int main(int argc, char* argv[])
 
 		else // TRIANGOLAZIONE DI CLASSE II
 		{
-			cout<<"triangolazione di classe II"<<endl;
-			 //triangolazione di classe 1 con parametro t_value
+			cout<<"Eseguiamo la triangolazione di classe II"<<endl;
 			Polyhedron mesh_triangolata2 = triangulateClass2(mesh, b);
 			Polyhedron mesh_proiettata = projectPolyhedronOnSphere(mesh_triangolata2);
-			Poliedro_finale = mesh_triangolata2;
+			Poliedro_finale = mesh_proiettata;
 		}
 	}
 	
@@ -85,12 +84,11 @@ int main(int argc, char* argv[])
 	// CASO CUBO (DUALE DELL'OTTAEDRO) e CASO DODECAEDRO (DUALE DELL'ICOSAEDRO)
 	else if (p == 4 || p == 5)  
 	{
-		cout<<"p = "<< p <<endl;
 		Polyhedron mesh = buildPlatonicSolid(p); //definiamo il solido platonico di partenza
 
 		if (b != c) // TRIANGOLAZIONE DI CLASSE I
 		{
-			cout<<"triangolazione di classe I"<<endl;
+			cout<<"Eseguiamo la triangolazione di classe I"<<endl;
 			unsigned int t_value = b + c; //valore che mi indica in quante parti dividere ogni lato del triangolo
 			Polyhedron mesh_triangolata1 = triangulateClass1(mesh, t_value); //triangolazione di classe 1 con parametro t_value	
 			Polyhedron mesh_dualizzata = Dualize(mesh_triangolata1);
@@ -99,11 +97,11 @@ int main(int argc, char* argv[])
 		}
 		else // TRIANGOLAZIONE DI CLASSE II
 		{
-			cout<<"triangolazione di classe II"<<endl;
+			cout<<"Eseguiamo la triangolazione di classe II"<<endl;
 			Polyhedron mesh_triangolata2 = triangulateClass2(mesh, b);
 			Polyhedron mesh_dualizzata = Dualize(mesh_triangolata2);
 			Polyhedron mesh_proiettata = projectPolyhedronOnSphere(mesh_dualizzata);
-			Poliedro_finale = mesh_dualizzata;
+			Poliedro_finale = mesh_proiettata;
 		}
 	}
 

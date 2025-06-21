@@ -21,8 +21,8 @@ Polyhedron Dualize(const Polyhedron& P_normale);
 Polyhedron projectPolyhedronOnSphere(const Polyhedron& P);
 
 void ExportPolyhedron(const Polyhedron& P,
-                    const vector<Gedim::UCDProperty<double>>& points_properties = {},
-                    const vector<Gedim::UCDProperty<double>>& segments_properties = {});
+                        const vector<Gedim::UCDProperty<double>>& points_properties = {},
+                        const vector<Gedim::UCDProperty<double>>& segments_properties = {});
 
 void Esporta_file(const Polyhedron& P);
 
