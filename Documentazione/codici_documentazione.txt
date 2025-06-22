@@ -1,0 +1,495 @@
+CODICI DOCUMENTAZIONE
+________________________________________________________________________________________________________________________
+1. CLASS DIAGRAM 
+
+@startuml
+
+title Polyhedron Models
+
+package PolyhedronLibrary <<Folder>> {
+
+class Polyhedron {
++ NumCell0Ds : unsigned int
++ NumCell1Ds : unsigned int
++ NumCell2Ds : unsigned int
++ NumCell3Ds : unsigned int
+
++ Cell0DsId : vector<unsigned int>
++ Cell1DsId : vector<unsigned int>
++ Cell2DsId : vector<unsigned int>
++ Cell3DsId : unsigned int
+
++ Cell0DsCoordinates : Eigen::MatrixXd
++ Cell1DsExtrema : Eigen::MatrixXi
++ Cell2DsVertices : vector<vector<unsigned int>>
++ Cell2DsEdges : vector<vector<unsigned int>>
++ Cell3DsVertices : vector<unsigned int>
++ Cell3DsEdges : vector<unsigned int>
++ Cell3DsFaces : vector<unsigned int>
+.. Non member function ..
+
+pair<vector<Vector3d>, vector<vector<unsigned int>>> SalvataggioDati(unsigned int& q)
+Polyhedron CreazioneSolidoPlatonico(unsigned int& q)
+Polyhedron TriangolazioneClasse1(const Polyhedron& P, const unsigned int& t_value)
+Polyhedron TriangolazioneClasse2(const Polyhedron& P, const unsigned int& b)
+Polyhedron Dualizzazione(const Polyhedron& P)
+Polyhedron ProiezioneSullaSfera(const Polyhedron& P)
+void EsportazionePoliedro(const Polyhedron& P, const vector<Gedim::UCDProperty<double>>& points_properties, const vector<Gedim::UCDProperty<double>>& segments_properties)
+void EsportazioneFile(const Polyhedron& P)
+vector<unsigned int> CalcoloCamminoMinimo(const Polyhedron& P, const unsigned int& v1, const unsigned int& v2)
+
+.. TESTPOLYHEDRON ..
+
+TestSalvataggioDati
+TestCreazioneSolidoPlatonico
+TestTriangolazioneClasse1
+TestTriangolazioneClasse2
+TestDualizzazione
+TestProiezioneSullaSfera
+TestEsportazionePoliedro
+TestEsporta_file
+TestCalcoloCamminoMinimo
+}
+
+}
+
+package Eigen <<Frame>> {
+}
+
+note "This is an external package" as EigenNote
+EigenNote .. Eigen
+
+Polyhedron::Cell0DsCoordinates --right--> Eigen
+Polyhedron::Cell1DsExtrema --right--> Eigen
+
+package GTest <<Frame>> {
+}
+
+note "Another external package" as GTestNote
+GTestNote .. GTest
+
+Polyhedron --> GTest
+
+@enduml
+
+_________________________________________________________________________________________________________________________________
+2. FLUSSO LOGICO
+@startuml
+title Flusso logico
+
+start
+
+:Leggi da terminale p, q, b, c [, v1, v2];
+
+if (numero parametri valido?) then (Sì)
+else
+    :Errore: numero parametri non valido;
+    stop
+endif
+
+if (p < 3 OR q < 3 OR 1/p + 1/q <= 0.5) then (Sì)
+    :Errore: p e q non validi;
+    stop
+endif
+
+if (b ≠ c AND b ≠ 0 AND c ≠ 0) then (Sì)
+    :Errore: triangolazione non gestita;
+    stop
+endif
+
+:Creazione solido platonico;
+
+if (p == 3?) then (Sì)
+    if (b ≠ c?) then (Classe I)
+        :Triangolazione Classe I;
+    else (Classe II)
+        :Triangolazione Classe II;
+    endif
+    :Proiezione sulla sfera;
+else (p == 4 o 5)
+    :Dualizzazione;
+    if (b ≠ c?) then (Classe I)
+        :Triangolazione Classe I;
+    else (Classe II)
+        :Triangolazione Classe II;
+    endif
+    :Proiezione sulla sfera;
+endif
+
+if (argc == 7?) then (Sì)
+    :Calcolo cammino minimo tra v1 e v2;
+    :Colorazione vertici/lati del percorso;
+endif
+
+:Esportazione (.inp e .txt);
+stop
+@enduml
+________________________________________________________________________________________________________________________
+3. SEQUENCE DIAGRAM 
+FUNZIONE SalvataggioDati
+
+@startuml
+title Sequence Diagram - SalvataggioDati(q)
+
+actor Main
+participant "SalvataggioDati" as Funzione
+participant "vertici" as Vertici
+participant "facce" as Facce
+
+Main -> Funzione : SalvataggioDati(q)
+
+alt q == 3 (Tetraedro)
+    Funzione -> Vertici : Inizializza 4 coordinate
+    Funzione -> Vertici : Normalizza ciascun vertice
+    Funzione -> Facce : Inizializza 4 triangoli
+else q == 4 (Ottaedro)
+    Funzione -> Vertici : Inizializza 6 coordinate
+    Funzione -> Vertici : Normalizza ciascun vertice
+    Funzione -> Facce : Inizializza 8 triangoli
+else q == 5 (Icosaedro)
+    Funzione -> Vertici : Inizializza 12 coordinate
+    Funzione -> Vertici : Normalizza ciascun vertice
+    Funzione -> Facce : Inizializza 20 triangoli
+end
+
+Funzione -> Main : return {vertici, facce}
+@enduml
+
+________________________________________________________________________________________________________________________
+FUNZIONE CreazioneSolidoPlatonico
+
+@startuml
+title Sequence Diagram - CreazioneSolidoPlatonico(q)
+
+actor Main
+participant "CreazioneSolidoPlatonico" as Funzione
+participant "SalvataggioDati" as Salvataggio
+participant "Polyhedron P" as Poliedro
+participant "MappaLati\n(map<...>)" as Mappa
+participant "MatrixXd\nCell0DsCoordinates" as Coord
+participant "MatrixXi\nCell1DsExtrema" as Estremi
+
+Main -> Funzione : CreazioneSolidoPlatonico(q)
+
+Funzione -> Salvataggio : SalvataggioDati(q)
+Salvataggio --> Funzione : return {vertici, facce}
+
+Funzione -> Poliedro : Imposta NumCell0Ds = vertici.size()
+loop Per ogni vertice
+    Funzione -> Poliedro : Aggiungi ID e coord.\nCell0DsId, Cell0DsCoordinates
+end
+
+loop Per ogni faccia
+    Funzione -> Poliedro : Aggiungi ID faccia\nCell2DsId, Cell2DsVertices
+    loop Per ogni lato nella faccia
+        Funzione -> Mappa : Controlla se lato è già presente
+        alt Nuovo lato
+            Mappa -> Poliedro : Aggiungi ID lato\nCell1DsId
+        end
+        Funzione -> Poliedro : Aggiungi ID lato alla faccia\nCell2DsEdges
+    end
+end
+
+Funzione -> Poliedro : Imposta NumCell1Ds = Mappa.size()
+
+loop Per ogni entry in Mappa
+    Mappa -> Estremi : Imposta vertici\nCell1DsExtrema
+end
+
+Funzione -> Poliedro : Imposta NumCell2Ds = facce.size()
+Funzione -> Poliedro : Imposta Cell3DsVertices,\nCell3DsEdges, Cell3DsFaces
+
+Funzione --> Main : return Polyhedron P
+
+@enduml
+
+________________________________________________________________________________________________________________________
+FUNZIONE TriangolazioneClasse1
+
+@startuml
+title Sequence Diagram - TriangolazioneClasse1(P, t_value)
+
+actor Main
+participant "TriangolazioneClasse1" as Funzione
+participant "Polyhedron P1" as P1
+participant "Polyhedron P (input)" as P
+participant "MappaPunti\n(map<tuple,...>)" as MappaPunti
+participant "MappaLati\n(map<pair,...>)" as MappaLati
+participant "MatrixXd\nCell0DsCoordinates" as Coord
+participant "MatrixXi\nCell1DsExtrema" as Extrema
+
+Main -> Funzione : TriangolazioneClasse1(P, t_value)
+
+loop Per ogni faccia in P
+    Funzione -> P : Legge vertici A, B, C
+    Funzione -> P : Legge coordinate vA, vB, vC
+
+    loop Per ogni riga i
+        loop Per ogni punto j della riga
+            Funzione -> Funzione : Calcola punto baricentrico
+
+            Funzione -> MappaPunti : Verifica se già esiste
+            alt Punto nuovo
+                MappaPunti -> P1 : Aggiungi punto in Cell0DsCoordinates
+                MappaPunti -> P1 : Aggiorna Cell0DsId
+            else Punto esistente
+                Funzione -> P1 : Usa ID già noto
+            end
+        end
+    end
+
+    loop Costruzione triangoli
+        loop Triangoli centrali
+            Funzione -> P1 : Aggiungi triangolo1 / triangolo2
+            loop Per ogni lato
+                Funzione -> MappaLati : Verifica presenza lato
+                alt Nuovo lato
+                    MappaLati -> P1 : Aggiungi nuovo ID lato in Cell1DsId
+                end
+                Funzione -> P1 : Aggiungi lato in Cell2DsEdges
+            end
+        end
+
+        Funzione -> P1 : Aggiungi triangolo in cima
+        loop Per ogni lato
+            Funzione -> MappaLati : Verifica presenza lato
+            alt Nuovo lato
+                MappaLati -> P1 : Aggiungi nuovo ID lato in Cell1DsId
+            end
+            Funzione -> P1 : Aggiungi lato in Cell2DsEdges
+        end
+    end
+end
+
+Funzione -> P1 : Aggiorna NumCell0Ds, NumCell1Ds, NumCell2Ds
+Funzione -> Extrema : Compila matrice Cell1DsExtrema
+Funzione -> P1 : Imposta Cell3DsVertices, Edges, Faces
+
+Funzione --> Main : return P1
+
+@enduml
+
+________________________________________________________________________________________________________________________
+FUNZIONE TriangolazioneClasse2
+
+@startuml
+actor "Utente" as User
+participant "TriangolazioneClasse2" as TC2
+participant "TriangolazioneClasse1" as TC1
+participant "Polyhedron P1"
+participant "Polyhedron P2"
+participant "MappaLati / MappaPunti"
+participant "FacceP1_inP / FaccePerLati"
+participant "Output: Polyhedron"
+
+== Inizio ==
+User -> TC2 : Chiama TriangolazioneClasse2(P, b)
+
+TC2 -> TC1 : TriangolazioneClasse1(P, b)
+TC1 --> TC2 : Ritorna P1
+
+TC2 -> P1 : Copia punti in P2
+TC2 -> MappaPunti : Registra punti originali
+loop per ogni faccia in P1
+    TC2 -> P1 : Calcola baricentro
+    TC2 -> MappaPunti : Controlla duplicati
+    TC2 -> P2 : Aggiunge baricentro
+end
+
+== Associa FacceP1 a P ==
+TC2 -> FacceP1_inP : Raggruppa triangoli di P1 per ogni faccia di P
+
+== Costruzione Mappa Lati ==
+TC2 -> MappaLati : Costruisce mappa lati da P1
+
+== Costruzione Triangolazione Classe 2 ==
+loop per ogni faccia originale di P
+    TC2 -> FaccePerLati : Trova lati condivisi tra triangoli
+    loop per ogni triangolo
+        TC2 -> MappaLati : Crea lati baricentro-vertici se non esistono
+    end
+    loop per ogni lato
+        alt Lato su bordo (1 faccia)
+            TC2 -> P2 : Crea punto medio
+            TC2 -> MappaLati : Aggiunge nuovi lati
+            TC2 -> P2 : Crea 2 triangoli
+        else Lato interno (2 facce)
+            TC2 -> MappaLati : Crea lato tra baricentri
+            TC2 -> P2 : Crea 2 triangoli
+        end
+    end
+    TC2 -> P2 : Collega baricentro ai punti medi
+end
+
+== Fine ==
+TC2 -> P2 : Aggiorna metadata NumCellXD
+TC2 --> Output: Polyhedron : Restituisce P2
+
+@enduml
+
+________________________________________________________________________________________________________________________
+FUNZIONE Dualizzazione
+
+@startuml
+actor "Utente" as User
+participant "Dualizzazione" as Dual
+participant "Polyhedron P"
+participant "Polyhedron P_duale"
+participant "LatiFacce"
+participant "VerticiFacce"
+participant "MappaLati"
+
+== Inizio ==
+User -> Dual : Chiama Dualizzazione(P)
+
+Dual -> P : Legge numero facce
+Dual -> P_duale : Inizializza vertici (baricentri delle facce)
+loop per ogni faccia
+    Dual -> P : Calcola baricentro
+    Dual -> P_duale : Salva baricentro come vertice duale
+end
+
+== Mappa Lati-Facce ==
+Dual -> LatiFacce : Costruisce mappa lati -> facce
+loop per ogni faccia
+    Dual -> LatiFacce : Registra lati
+end
+
+== Crea Lati nel Duale ==
+loop per ogni lato con 2 facce
+    Dual -> P_duale : Crea lato tra baricentri (facce adiacenti)
+end
+
+Dual -> P_duale : Scrive Cell1DsExtrema
+
+== Ogni vertice diventa faccia ==
+Dual -> VerticiFacce : Mappa vertici -> facce originali
+loop per ogni vertice
+    Dual -> P_duale : Crea faccia nel duale
+end
+
+== Assegna Cella 3D ==
+Dual -> P_duale : Assegna Cell3DsFaces, Vertices, Edges
+
+== Costruzione Mappa Lati nel Duale ==
+Dual -> MappaLati : Costruisce mappa (v1,v2) -> id_lato
+
+== Riempimento Cell2DsEdges ==
+loop per ogni faccia nel duale
+    loop per ogni coppia consecutiva di vertici
+        Dual -> MappaLati : Trova o crea id_lato
+        Dual -> P_duale : Aggiunge id_lato a Cell2DsEdges
+    end
+end
+
+Dual --> User : Ritorna P_duale
+
+@enduml
+
+________________________________________________________________________________________________________________________
+FUNZIONE EsportazioneFile
+
+@startuml
+actor "Utente" as User
+participant "EsportazioneFile" as EF
+participant "Polyhedron" as P
+participant "File: Cell0Ds.txt"
+participant "File: Cell1Ds.txt"
+participant "File: Cell2Ds.txt"
+participant "File: Cell3Ds.txt"
+
+== Inizio ==
+User -> EF : Chiama EsportazioneFile(P)
+
+== Scrittura Cell0Ds.txt ==
+EF -> P : Legge Cell0DsCoordinates e NumCell0Ds
+EF -> "File: Cell0Ds.txt" : Apre e scrive header
+loop per ogni vertice
+    EF -> "File: Cell0Ds.txt" : Scrive ID e coordinate
+end
+EF -> "File: Cell0Ds.txt" : Chiude file
+
+== Scrittura Cell1Ds.txt ==
+EF -> P : Legge Cell1DsExtrema e NumCell1Ds
+EF -> "File: Cell1Ds.txt" : Apre e scrive header
+loop per ogni lato
+    EF -> "File: Cell1Ds.txt" : Scrive ID, origine, estremità
+end
+EF -> "File: Cell1Ds.txt" : Chiude file
+
+== Scrittura Cell2Ds.txt ==
+EF -> P : Legge Cell2DsVertices e Cell2DsEdges
+EF -> "File: Cell2Ds.txt" : Apre e scrive header
+loop per ogni faccia
+    EF -> "File: Cell2Ds.txt" : Scrive ID, vertici, lati
+end
+EF -> "File: Cell2Ds.txt" : Chiude file
+
+== Scrittura Cell3Ds.txt ==
+EF -> P : Legge Cell3DsVertices, Edges, Faces e Cell3DsId
+EF -> "File: Cell3Ds.txt" : Apre e scrive header
+EF -> "File: Cell3Ds.txt" : Scrive dati del poliedro 3D
+EF -> "File: Cell3Ds.txt" : Chiude file
+
+== Fine ==
+EF --> User : File esportati con successo
+@enduml
+
+________________________________________________________________________________________________________________________
+FUNZIONE CalcoloCamminoMinimo
+
+@startuml
+actor "Utente" as User
+participant "CalcoloCamminoMinimo" as CCM
+participant "Polyhedron" as P
+participant "ListaAdiacenza"
+participant "Distanze"
+participant "Heap"
+participant "Parent"
+participant "Cammino"
+
+== Inizio ==
+User -> CCM : Chiama CalcoloCamminoMinimo(P, v1, v2)
+
+== Costruzione Lista di Adiacenza ==
+CCM -> P : Legge Cell1DsExtrema e Cell0DsCoordinates
+loop per ogni lato
+    CCM -> ListaAdiacenza : Calcola distanza euclidea
+    ListaAdiacenza -> ListaAdiacenza : Aggiunge arco bidirezionale
+end
+
+== Inizializzazione Dijkstra ==
+CCM -> Distanze : Inizializza tutte le distanze a ∞
+CCM -> Parent : Inizializza tutti i predecessori a N
+CCM -> Heap : Inserisce v1 con distanza 0
+
+== Esecuzione Dijkstra ==
+loop finché heap non è vuoto
+    Heap -> CCM : Estrae nodo con distanza minima
+
+    alt nodo == v2
+        CCM -> CCM : Interrompe il ciclo
+    else
+        loop per ogni vicino
+            CCM -> Distanze : Calcola nuova distanza
+            alt nuova distanza < distanza attuale
+                CCM -> Distanze : Aggiorna distanza
+                CCM -> Parent : Aggiorna predecessore
+                CCM -> Heap : Inserisce vicino aggiornato
+            end
+        end
+    end
+end
+
+== Ricostruzione Cammino ==
+alt distanza[v2] == ∞
+    CCM -> User : Nessun percorso trovato
+    return []
+else
+    CCM -> Parent : Ricostruisce cammino a ritroso
+    CCM -> Cammino : Costruisce cammino
+    Cammino -> Cammino : Inverte ordine
+    CCM -> User : Stampa info cammino
+    return cammino
+end
+@enduml

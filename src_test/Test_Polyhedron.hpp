@@ -56,7 +56,7 @@ namespace PolyhedronLibrary {
     {
         unsigned int q = 3;  // Test per il tetraedro
         unsigned int t = 2; 
-        unsigned int T = t * t;     // T = b^2 + bc + c^2 con t = b + c ⇒ T = t^2
+        unsigned int T = t * t;  // T = b^2 + bc + c^2 con t = b + c ⇒ T = t^2
 
         // Dati delle formule
         unsigned int V_atteso = 2 * T + 2;
@@ -84,7 +84,7 @@ namespace PolyhedronLibrary {
         unsigned int q = 3;  // Test per il tetraedro
         unsigned int b = 2;
 
-        // Costruisci il solido platonico (tetraedro)
+        // Costruisco il solido platonico 
         Polyhedron P = CreazioneSolidoPlatonico(q);
 
         // Triangolazione di classe 2
@@ -102,7 +102,6 @@ namespace PolyhedronLibrary {
 
         unsigned int F_atteso = F0 * (3 * b * b + 3 * b);
 
-        // Asserzioni
         EXPECT_EQ(P2.NumCell0Ds, V_atteso) << "Numero di vertici errato";
         EXPECT_EQ(P2.NumCell1Ds, E_atteso) << "Numero di lati errato";
         EXPECT_EQ(P2.NumCell2Ds, F_atteso) << "Numero di facce errato";
@@ -122,6 +121,7 @@ namespace PolyhedronLibrary {
         // - 4 facce nel solido di partenza → 4 vertici nel duale
         // - 6 spigoli nel solido di partenza → 6 spigoli nel duale
         // - 4 vertici nel solido di partenza → 4 facce nel duale
+
         unsigned int V_atteso = P.NumCell2Ds;
         unsigned int E_atteso = P.NumCell1Ds;
         unsigned int F_atteso = P.NumCell0Ds;
@@ -136,7 +136,7 @@ namespace PolyhedronLibrary {
     TEST(TestPolyhedron, TestProiezioneSullaSfera)
     {
         Polyhedron P;
-        // Inserisci 3 vertici arbitrari NON normalizzati
+        // Inserisco 3 vertici arbitrari NON normalizzati
         P.NumCell0Ds = 3;
         P.Cell0DsId = {0, 1, 2};
         P.Cell0DsCoordinates.resize(3, 3);
@@ -144,24 +144,23 @@ namespace PolyhedronLibrary {
         P.Cell0DsCoordinates.col(1) << 0.0, 3.0, 4.0;
         P.Cell0DsCoordinates.col(2) << -1.0, -1.0, -1.0;
 
-        // Esegui proiezione con la nostra funzione
+        // Eseguo proiezione con la nostra funzione
         Polyhedron P_proiettato = ProiezioneSullaSfera(P);
 
-        // Verifica che la dimensione resti la stessa
+        // Verifico che la dimensione resti la stessa
         ASSERT_EQ(P_proiettato.NumCell0Ds, 3);
         ASSERT_EQ(P_proiettato.Cell0DsCoordinates.cols(), 3);
 
-        // Verifica che ogni punto abbia norma ≈ 1
+        // Verifico che ogni punto abbia norma ≈ 1
         for (int i = 0; i < P_proiettato.Cell0DsCoordinates.cols(); ++i) 
         {
             double norma = P_proiettato.Cell0DsCoordinates.col(i).norm();
             EXPECT_NEAR(norma, 1.0, 1e-8) << "Vertice " << i << " non è unitario, ha norma = " << norma << endl;
         }
 
-        // Verifica che gli ID siano invariati
+        // Verifico che gli ID siano invariati
         EXPECT_EQ(P_proiettato.Cell0DsId, P.Cell0DsId);
     }
-
 
     
     // G TEST PER EsportazionePoliedro su un segmento di due punti
@@ -189,7 +188,7 @@ namespace PolyhedronLibrary {
         P.Cell2DsId = {};
         P.NumCell2Ds = 0;
 
-        // Poliedro 3D (deve essere inizializzato anche se non ha significato)
+        // Poliedro 3D 
         P.Cell3DsVertices = {{0, 1}};
         P.Cell3DsEdges = {{0}};
         P.Cell3DsFaces = {{}};
@@ -203,8 +202,7 @@ namespace PolyhedronLibrary {
         ifstream file0("Cell0Ds.inp");
         ASSERT_TRUE(file0.is_open()) << "Cell0Ds.inp non è stato creato";
 
-        // .peek() = prende il primo carattere del file, NE = not equal
-        ASSERT_NE(file0.peek(), ifstream::traits_type::eof()) << "Cell0Ds.inp è vuoto";
+        ASSERT_NE(file0.peek(), ifstream::traits_type::eof()) << "Cell0Ds.inp è vuoto";  // .peek() = prende il primo carattere del file, NE = not equal
         file0.close();
 
         ifstream file1("Cell1Ds.inp");
@@ -225,7 +223,7 @@ namespace PolyhedronLibrary {
     // G TEST PER Esporta_file su un segmento di due punti
     TEST(TestPolyhedron, TestEsporta_file) 
     {
-        // Crea un polyhedron minimale: 2 vertici, 1 lato, 1 faccia, 1 cella
+        // Creo un polyhedron minimale: 2 vertici, 1 lato, 1 faccia, 1 cella
         Polyhedron P;
     
         // Vertici
@@ -255,10 +253,9 @@ namespace PolyhedronLibrary {
         P.Cell3DsId = 0;
         P.NumCell3Ds = 1;
     
-        // Chiamata alla funzione da testare
         EsportazioneFile(P);
     
-        // Verifica esistenza e non-vuotezza dei file
+        // Verifico esistenza e non-vuotezza dei file
         const vector<string> files = { "Cell0Ds.txt", "Cell1Ds.txt", "Cell2Ds.txt", "Cell3Ds.txt" };
     
         for (const auto& nome_file : files)
@@ -269,10 +266,9 @@ namespace PolyhedronLibrary {
             file.close();
         }
     
-        // Pulizia finale
+        // Pulizia
         for (const auto& nome_file : files)
         {
-            // cancella il file
             remove(nome_file.c_str());
         }
     }
@@ -280,26 +276,25 @@ namespace PolyhedronLibrary {
     // G TEST PER CalcoloCamminoMinimo
     TEST(TestPolyhedron, TestCalcoloCamminoMinimo)
     {
-        // testiamo il cammino minimo tra i vertici 10 e 58 del dodecaedro con triangolazione di classe 1 con t=4
+        // Testo il cammino minimo tra i vertici 10 e 58 del dodecaedro con triangolazione di classe 1 con t=4
         unsigned int q = 4;
         unsigned int t = 4;
         Polyhedron P = CreazioneSolidoPlatonico(q);
         Polyhedron P1 = TriangolazioneClasse1(P, t);
         Polyhedron P_duale = Dualizzazione(P1);
         Polyhedron P_proiettato = ProiezioneSullaSfera(P_duale);
-
     
         unsigned int v1 = 10;
         unsigned int v2 = 58;
     
-        // Trtova il cammino minimo
+        // Trovo il cammino minimo
         vector<unsigned int> cammino = CalcoloCamminoMinimo(P_proiettato, v1, v2);
     
         // Verifiche sul cammino
         ASSERT_FALSE(cammino.empty()) << "Cammino non trovato.";
         EXPECT_EQ(cammino.size() - 1, 3) << "Il cammino deve attraversare 3 lati (4 vertici).";
 
-        // 7. Verifica che la sequenza di vertici sia quella attesa (ipotizziamo un cammino noto)
+        // Verifico che la sequenza di vertici sia quella attesa (ipotizziamo un cammino noto trovato con Paraview)
         vector<unsigned int> cammino_atteso = {10, 9, 57, 58}; 
         EXPECT_EQ(cammino, cammino_atteso) << "La sequenza del cammino minimo non è quella attesa";
     }

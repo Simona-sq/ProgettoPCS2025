@@ -22,6 +22,7 @@ int main(int argc, char* argv[])
 	q = stoi(argv[2]);
 	b = stoi(argv[3]);
 	c = stoi(argv[4]);
+
 	if (argc == 5) 
 	{
 		cout << "Input ricevuto: p = " << p << ", q = " << q << ", b = " << b << ", c = " << c << "\n";
@@ -38,34 +39,33 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
-	// controllo le condizioni su p e q
+	// Controllo le condizioni su p e q
 	if (p < 3 || q < 3 || double (1.0/p)+double (1.0/q) <= 0.5)
 	{
 		cerr << "Errore: i parametri p e q non rispettano le condizioni dei poligoni platonici.\n";
     	return 1;
 	}
 
-	// controllo delle classi di triangolazione valide
+	// Controllo delle classi di triangolazione valide
 	if (b != c && b!= 0 && c!= 0)
 	{
 		cerr << "Errore: classe non trattata.\n";
 		return 1;
 	}
 
-	
 	// Creo il solido platonico e riempo la struct
 	Polyhedron poliedro_finale;
 
 	// CASO TETRAEDRO, OTTAEDRO, ICOSAEDRO
 	if (p == 3)
 	{	
-		Polyhedron mesh = CreazioneSolidoPlatonico(q); // definiamo il solido platonico di partenza
+		Polyhedron mesh = CreazioneSolidoPlatonico(q); // definisco il solido platonico di partenza
 
 		if (b != c) // TRIANGOLAZIONE DI CLASSE I
 		{
 			cout<<"Eseguiamo la triangolazione di classe I"<<endl;
-			unsigned int t_value = b + c; //valore che mi indica in quante parti dividere ogni lato del triangolo
-			Polyhedron mesh_triangolata1 = TriangolazioneClasse1(mesh, t_value); //triangolazione di classe 1 con parametro t_value
+			unsigned int t_value = b + c; // valore che mi indica in quante parti dividere ogni lato del triangolo
+			Polyhedron mesh_triangolata1 = TriangolazioneClasse1(mesh, t_value);
 			Polyhedron mesh_proiettata = ProiezioneSullaSfera(mesh_triangolata1);
 			poliedro_finale = mesh_proiettata;
 		}
@@ -79,17 +79,16 @@ int main(int argc, char* argv[])
 		}
 	}
 	
-
 	// CASO CUBO (DUALE DELL'OTTAEDRO) e CASO DODECAEDRO (DUALE DELL'ICOSAEDRO)
 	else if (p == 4 || p == 5)  
 	{
-		Polyhedron mesh = CreazioneSolidoPlatonico(p); //definiamo il solido platonico di partenza
+		Polyhedron mesh = CreazioneSolidoPlatonico(p); // definisco il solido platonico di partenza
 
 		if (b != c) // TRIANGOLAZIONE DI CLASSE I
 		{
 			cout<<"Eseguiamo la triangolazione di classe I"<<endl;
-			unsigned int t_value = b + c; //valore che mi indica in quante parti dividere ogni lato del triangolo
-			Polyhedron mesh_triangolata1 = TriangolazioneClasse1(mesh, t_value); //triangolazione di classe 1 con parametro t_value	
+			unsigned int t_value = b + c; // valore che mi indica in quante parti dividere ogni lato del triangolo
+			Polyhedron mesh_triangolata1 = TriangolazioneClasse1(mesh, t_value);	
 			Polyhedron mesh_dualizzata = Dualizzazione(mesh_triangolata1);
 			Polyhedron mesh_proiettata = ProiezioneSullaSfera(mesh_dualizzata);
 			poliedro_finale = mesh_proiettata;
@@ -105,34 +104,33 @@ int main(int argc, char* argv[])
 	}
 
 	
-	//Cammini minimi	
+	// Cerco il cammino minimo	
 	if(argc == 7)
 	{	
-		// controllo su v1 e v2
+		// Controllo validità v1 e v2
 		if (v1 >= poliedro_finale.NumCell0Ds || v2 >= poliedro_finale.NumCell0Ds) 
 		{
 			cerr<<"I valori di v1 e v2 non sono validi: devono appartenere all'intervallo [0, " << poliedro_finale.NumCell0Ds -1<< "]" <<endl;
 			return 1;
 		}
 
-
 		vector<Gedim::UCDProperty<double>> points_properties;
 		vector<Gedim::UCDProperty<double>> segments_properties;
-		points_properties.reserve(1); //Proprietà: ShortPath
+		points_properties.reserve(1); // Proprietà: ShortPath
 		segments_properties.reserve(1);
 
-		// imposto i valori di tutti i vertici e lati a zero; imposteremo ad uno quelli che appartengono al cammino minimo
+		// Imposto inizialmente i valori di tutti i vertici e lati a 0; poi imposteremo ad 1 quelli che appartengono al cammino minimo
 		vector<double> proprieta_vertici(poliedro_finale.NumCell0Ds, 0.0);
 		vector<double> proprieta_lati(poliedro_finale.NumCell1Ds, 0.0);
 
-		//Riempimento point_properties
+		// Riempio point_properties
 		Gedim::UCDProperty<double> prop_punto;
 		prop_punto.Label = "ShortPath";
 		prop_punto.NumComponents = 1;
 		prop_punto.Data = proprieta_vertici.data();
 		points_properties.push_back(prop_punto);
 
-		//Riempimento segments_properties
+		// Riempio segments_properties
 		Gedim::UCDProperty<double> prop_lato;
 		prop_lato.Label = "ShortPath";
 		prop_lato.NumComponents = 1;
@@ -142,17 +140,17 @@ int main(int argc, char* argv[])
 
 		vector<unsigned int> cammino = CalcoloCamminoMinimo(poliedro_finale, v1, v2);
 	
-		//Riempimento prop_vert
+		// Riempio prop_vert
 		for(unsigned int id_v : cammino) proprieta_vertici[id_v] = 1.0; //imposta a 1.0 la proprietà dei vertici lungo il percorso
 
-		// Riempimento prop_edges
+		// Riempio prop_edges
 		for(unsigned int i=0; i < cammino.size() - 1; i++)
 		{
 			unsigned int corrente = cammino[i];
 			unsigned int successivo = cammino[i+1];
 			unordered_set<unsigned int> punti_vicini = {corrente, successivo};
 
-			// Itera sugli spigoli e, se lo spigolo è formato da corrente, successivo, imposta prop_edges[j] = 1.0
+			// Itero sugli spigoli e, se lo spigolo è formato da (corrente, successivo), imposto prop_edges[j] = 1
 			for(unsigned int j=0; j < poliedro_finale.Cell1DsExtrema.cols(); j++)
 			{
 				Vector2i segmento = poliedro_finale.Cell1DsExtrema.col(j);
@@ -171,6 +169,7 @@ int main(int argc, char* argv[])
 	{
 		EsportazionePoliedro(poliedro_finale);
 	}
+
 	cout << "I dati del solido geodetico sono stati salvati nei file: 'Cell0Ds.txt','Cell1Ds.txt','Cell2Ds.txt','Cell3Ds.txt' " << endl;
 	
 	return 0;
