@@ -8,23 +8,23 @@ using namespace std;
 
 namespace PolyhedronLibrary
 {
-pair<vector<Vector3d>, vector<vector<unsigned int>>> getSolidData(unsigned int& q);
+pair<vector<Vector3d>, vector<vector<unsigned int>>> SalvataggioDati(unsigned int& q);
 
-Polyhedron buildPlatonicSolid(unsigned int& q);
+Polyhedron CreazioneSolidoPlatonico(unsigned int& q);
 
-Polyhedron triangulateClass1(const Polyhedron& P, const unsigned int& t_value);
+Polyhedron TriangolazioneClasse1(const Polyhedron& P, const unsigned int& t_value);
 
-Polyhedron triangulateClass2(const Polyhedron& P, const unsigned int& b);
+Polyhedron TriangolazioneClasse2(const Polyhedron& P, const unsigned int& b);
 
-Polyhedron Dualize(const Polyhedron& P_normale);
+Polyhedron Dualizzazione(const Polyhedron& P);
 
-Polyhedron projectPolyhedronOnSphere(const Polyhedron& P);
+Polyhedron ProiezioneSullaSfera(const Polyhedron& P);
 
-void ExportPolyhedron(const Polyhedron& P,
+void EsportazionePoliedro(const Polyhedron& P,
                         const vector<Gedim::UCDProperty<double>>& points_properties = {},
                         const vector<Gedim::UCDProperty<double>>& segments_properties = {});
 
-void Esporta_file(const Polyhedron& P);
+void EsportazioneFile(const Polyhedron& P);
 
-vector<unsigned int> Cammini_minimi(const Polyhedron& P, const unsigned int& v1, const unsigned int& v2);
+vector<unsigned int> CalcoloCamminoMinimo(const Polyhedron& P, const unsigned int& v1, const unsigned int& v2);
 }

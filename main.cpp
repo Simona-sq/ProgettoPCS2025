@@ -18,8 +18,7 @@ int main(int argc, char* argv[])
 	unsigned int v1 = 0;
 	unsigned int v2 = 0;
 	
-	// controllo che il tipo dei valori inseriti sia int
-	p = stoi(argv[1]); //commenta stoi
+	p = stoi(argv[1]); // stoi: converte una stringa in un intero
 	q = stoi(argv[2]);
 	b = stoi(argv[3]);
 	c = stoi(argv[4]);
@@ -53,29 +52,30 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
+	
 	// Creo il solido platonico e riempo la struct
-	// CASO TETRAEDRO, OTTAEDRO, ICOSAEDRO
-	Polyhedron Poliedro_finale;
+	Polyhedron poliedro_finale;
 
+	// CASO TETRAEDRO, OTTAEDRO, ICOSAEDRO
 	if (p == 3)
 	{	
-		Polyhedron mesh = buildPlatonicSolid(q); //definiamo il solido platonico di partenza
+		Polyhedron mesh = CreazioneSolidoPlatonico(q); // definiamo il solido platonico di partenza
 
 		if (b != c) // TRIANGOLAZIONE DI CLASSE I
 		{
 			cout<<"Eseguiamo la triangolazione di classe I"<<endl;
 			unsigned int t_value = b + c; //valore che mi indica in quante parti dividere ogni lato del triangolo
-			Polyhedron mesh_triangolata1 = triangulateClass1(mesh, t_value); //triangolazione di classe 1 con parametro t_value
-			Polyhedron mesh_proiettata = projectPolyhedronOnSphere(mesh_triangolata1);
-			Poliedro_finale = mesh_proiettata;
+			Polyhedron mesh_triangolata1 = TriangolazioneClasse1(mesh, t_value); //triangolazione di classe 1 con parametro t_value
+			Polyhedron mesh_proiettata = ProiezioneSullaSfera(mesh_triangolata1);
+			poliedro_finale = mesh_proiettata;
 		}
 
 		else // TRIANGOLAZIONE DI CLASSE II
 		{
 			cout<<"Eseguiamo la triangolazione di classe II"<<endl;
-			Polyhedron mesh_triangolata2 = triangulateClass2(mesh, b);
-			Polyhedron mesh_proiettata = projectPolyhedronOnSphere(mesh_triangolata2);
-			Poliedro_finale = mesh_proiettata;
+			Polyhedron mesh_triangolata2 = TriangolazioneClasse2(mesh, b);
+			Polyhedron mesh_proiettata = ProiezioneSullaSfera(mesh_triangolata2);
+			poliedro_finale = mesh_proiettata;
 		}
 	}
 	
@@ -83,24 +83,24 @@ int main(int argc, char* argv[])
 	// CASO CUBO (DUALE DELL'OTTAEDRO) e CASO DODECAEDRO (DUALE DELL'ICOSAEDRO)
 	else if (p == 4 || p == 5)  
 	{
-		Polyhedron mesh = buildPlatonicSolid(p); //definiamo il solido platonico di partenza
+		Polyhedron mesh = CreazioneSolidoPlatonico(p); //definiamo il solido platonico di partenza
 
 		if (b != c) // TRIANGOLAZIONE DI CLASSE I
 		{
 			cout<<"Eseguiamo la triangolazione di classe I"<<endl;
 			unsigned int t_value = b + c; //valore che mi indica in quante parti dividere ogni lato del triangolo
-			Polyhedron mesh_triangolata1 = triangulateClass1(mesh, t_value); //triangolazione di classe 1 con parametro t_value	
-			Polyhedron mesh_dualizzata = Dualize(mesh_triangolata1);
-			Polyhedron mesh_proiettata = projectPolyhedronOnSphere(mesh_dualizzata);
-			Poliedro_finale = mesh_proiettata;
+			Polyhedron mesh_triangolata1 = TriangolazioneClasse1(mesh, t_value); //triangolazione di classe 1 con parametro t_value	
+			Polyhedron mesh_dualizzata = Dualizzazione(mesh_triangolata1);
+			Polyhedron mesh_proiettata = ProiezioneSullaSfera(mesh_dualizzata);
+			poliedro_finale = mesh_proiettata;
 		}
 		else // TRIANGOLAZIONE DI CLASSE II
 		{
 			cout<<"Eseguiamo la triangolazione di classe II"<<endl;
-			Polyhedron mesh_triangolata2 = triangulateClass2(mesh, b);
-			Polyhedron mesh_dualizzata = Dualize(mesh_triangolata2);
-			Polyhedron mesh_proiettata = projectPolyhedronOnSphere(mesh_dualizzata);
-			Poliedro_finale = mesh_proiettata;
+			Polyhedron mesh_triangolata2 = TriangolazioneClasse2(mesh, b);
+			Polyhedron mesh_dualizzata = Dualizzazione(mesh_triangolata2);
+			Polyhedron mesh_proiettata = ProiezioneSullaSfera(mesh_dualizzata);
+			poliedro_finale = mesh_proiettata;
 		}
 	}
 
@@ -109,63 +109,67 @@ int main(int argc, char* argv[])
 	if(argc == 7)
 	{	
 		// controllo su v1 e v2
-		if (v1 >= Poliedro_finale.NumCell0Ds || v2 >= Poliedro_finale.NumCell0Ds) 
+		if (v1 >= poliedro_finale.NumCell0Ds || v2 >= poliedro_finale.NumCell0Ds) 
 		{
-			cerr<<"I valori di v1 e v2 non sono validi: devono appartenere all'intervallo [0, " << Poliedro_finale.NumCell0Ds -1<< "]" <<endl;
+			cerr<<"I valori di v1 e v2 non sono validi: devono appartenere all'intervallo [0, " << poliedro_finale.NumCell0Ds -1<< "]" <<endl;
 			return 1;
 		}
+
 
 		vector<Gedim::UCDProperty<double>> points_properties;
 		vector<Gedim::UCDProperty<double>> segments_properties;
 		points_properties.reserve(1); //Proprietà: ShortPath
 		segments_properties.reserve(1);
 
-		vector<double> prop_vert(Poliedro_finale.NumCell0Ds, 0.0);
-		vector<double> prop_edges(Poliedro_finale.NumCell1Ds, 0.0);
+		// imposto i valori di tutti i vertici e lati a zero; imposteremo ad uno quelli che appartengono al cammino minimo
+		vector<double> proprieta_vertici(poliedro_finale.NumCell0Ds, 0.0);
+		vector<double> proprieta_lati(poliedro_finale.NumCell1Ds, 0.0);
 
 		//Riempimento point_properties
-		Gedim::UCDProperty<double> pointP;
-		pointP.Label = "ShortPath";
-		pointP.NumComponents = 1;
-		pointP.Data = prop_vert.data();
-		points_properties.push_back(pointP);
+		Gedim::UCDProperty<double> prop_punto;
+		prop_punto.Label = "ShortPath";
+		prop_punto.NumComponents = 1;
+		prop_punto.Data = proprieta_vertici.data();
+		points_properties.push_back(prop_punto);
 
 		//Riempimento segments_properties
-		Gedim::UCDProperty<double> edgeP;
-		edgeP.Label = "ShortPath";
-		edgeP.NumComponents = 1;
-		edgeP.Data = prop_edges.data();
-		segments_properties.push_back(edgeP);
+		Gedim::UCDProperty<double> prop_lato;
+		prop_lato.Label = "ShortPath";
+		prop_lato.NumComponents = 1;
+		prop_lato.Data = proprieta_lati.data();
+		segments_properties.push_back(prop_lato);
 
 
-		vector<unsigned int> path = Cammini_minimi(Poliedro_finale, v1, v2);
+		vector<unsigned int> cammino = CalcoloCamminoMinimo(poliedro_finale, v1, v2);
 	
 		//Riempimento prop_vert
-		for(unsigned int id_v : path) prop_vert[id_v] = 1.0; //imposta a 1.0 la proprietà dei vertici lungo il percorso
+		for(unsigned int id_v : cammino) proprieta_vertici[id_v] = 1.0; //imposta a 1.0 la proprietà dei vertici lungo il percorso
 
 		// Riempimento prop_edges
-		for(unsigned int i=0; i < path.size() - 1; i++)
+		for(unsigned int i=0; i < cammino.size() - 1; i++)
 		{
-			unsigned int corrente = path[i];
-			unsigned int successivo = path[i+1];
-			std::unordered_set<unsigned int> edge_ref = {corrente, successivo};
+			unsigned int corrente = cammino[i];
+			unsigned int successivo = cammino[i+1];
+			unordered_set<unsigned int> punti_vicini = {corrente, successivo};
 
 			// Itera sugli spigoli e, se lo spigolo è formato da corrente, successivo, imposta prop_edges[j] = 1.0
-			for(unsigned int j=0; j < Poliedro_finale.Cell1DsExtrema.cols(); j++)
+			for(unsigned int j=0; j < poliedro_finale.Cell1DsExtrema.cols(); j++)
 			{
-				Eigen::Vector2i edge = Poliedro_finale.Cell1DsExtrema.col(j);
-				unsigned int a = edge[0]; 
-				unsigned int b = edge[1];
-				if(edge_ref.count(a) + edge_ref.count(b) == 2) prop_edges[j] = 1.0;
+				Vector2i segmento = poliedro_finale.Cell1DsExtrema.col(j);
+				unsigned int a = segmento[0]; 
+				unsigned int b = segmento[1];
+				if(punti_vicini.count(a) + punti_vicini.count(b) == 2)
+				{
+					proprieta_lati[j] = 1.0;
+				}
 			}
 		}
-
-		ExportPolyhedron(Poliedro_finale, points_properties, segments_properties);
+		EsportazionePoliedro(poliedro_finale, points_properties, segments_properties);
 	}
 
 	else
 	{
-		ExportPolyhedron(Poliedro_finale);
+		EsportazionePoliedro(poliedro_finale);
 	}
 	cout << "I dati del solido geodetico sono stati salvati nei file: 'Cell0Ds.txt','Cell1Ds.txt','Cell2Ds.txt','Cell3Ds.txt' " << endl;
 	

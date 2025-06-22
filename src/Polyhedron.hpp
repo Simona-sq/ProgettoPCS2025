@@ -14,7 +14,7 @@ struct Polyhedron
 {
     unsigned int NumCell0Ds = 0; // Numero di vertici
     vector<unsigned int> Cell0DsId = {}; // Cell0DsId contiene gli id dei vertici
-    Eigen::MatrixXd Cell0DsCoordinates = {}; // Cell0DCoordinates è la matrice delle coordinate dei vertici
+    MatrixXd Cell0DsCoordinates = {}; // Cell0DCoordinates è la matrice delle coordinate dei vertici
 
     unsigned int NumCell1Ds = 0; // Numero di lati
     vector<unsigned int> Cell1DsId = {}; // Cell1DsId contiene gli id dei lati
