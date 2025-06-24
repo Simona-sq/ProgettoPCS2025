@@ -101,7 +101,7 @@ namespace PolyhedronLibrary
         // Per ogni faccia: registro l’ID della faccia, salvo i vertici della faccia ed estraggo tutti i lati, tenendo conto dell’orientamento
         for (unsigned int fid = 0; fid < facce.size(); fid++) 
         {
-            const auto f = facce[fid];
+            const auto& f = facce[fid];
             P.Cell2DsId.push_back(fid);
             P.Cell2DsVertices.push_back(f);
 
@@ -171,7 +171,7 @@ namespace PolyhedronLibrary
         // Itero su ogni faccia del solido platonico di partenza
         for (size_t fid = 0; fid < P.Cell2DsVertices.size(); fid++) 
         {
-            const auto faccia = P.Cell2DsVertices[fid];
+            const auto& faccia = P.Cell2DsVertices[fid];
 
             // Salvo gli id dei vertici A B C del solido platonico di partenza
             unsigned int A = faccia[0]; 
@@ -338,7 +338,9 @@ namespace PolyhedronLibrary
                 P2.Cell0DsId.push_back(id_nuovo_punto);
                 MappaPunti[key] = id_nuovo_punto;
                 IdBaricentri[fid] = id_nuovo_punto++;
-            } else {
+            }
+            else
+            {
                 IdBaricentri[fid] = MappaPunti[key];
             }
         }
@@ -374,7 +376,8 @@ namespace PolyhedronLibrary
             // Mappa: chiave = id lato di P1, valore = vettore di id delle facce di P1 che lo contengono
             map<unsigned int, vector<unsigned int>> FaccePerLati;
 
-            for (unsigned int fid_P1 : facceP1) {
+            for (unsigned int fid_P1 : facceP1)
+            {
                 const vector<unsigned int>& lati = P1.Cell2DsEdges[fid_P1];
 
                 for (unsigned int id_lato : lati) {
@@ -399,11 +402,13 @@ namespace PolyhedronLibrary
                 unsigned int id_baricentro = IdBaricentri[fid_P1];
                 const vector<unsigned int>& vertici = P1.Cell2DsVertices[fid_P1];
 
-                for (unsigned int vid : vertici) {
+                for (unsigned int vid : vertici)
+                {
                     pair<unsigned int, unsigned int> key_lato = minmax(id_baricentro, vid);
 
                     // Verifica se l'arco esiste già
-                    if (MappaLati.find(key_lato) == MappaLati.end()) {
+                    if (MappaLati.find(key_lato) == MappaLati.end())
+                    {
                         unsigned int id_nuovo_lato = P2.Cell1DsId.size();
                         P2.Cell1DsId.push_back(id_nuovo_lato);
                         P2.Cell1DsExtrema.conservativeResize(2, id_nuovo_lato + 1);
@@ -420,7 +425,7 @@ namespace PolyhedronLibrary
             for (const auto& riga : FaccePerLati)
             {
                 unsigned int id_lato = riga.first;
-                const vector<unsigned int> facce = riga.second;
+                const vector<unsigned int>& facce = riga.second;
 
                 // Parte 1: il lato appartiene ad una sola faccia (sul bordo)
                 if (facce.size() == 1) {
@@ -438,16 +443,19 @@ namespace PolyhedronLibrary
                     // Controllo duplicati
                     bool esiste = false;
                     unsigned int id_punto_medio = 0;
-                    for (unsigned int pid = 0; pid < P2.Cell0DsCoordinates.cols(); pid++) {
+                    for (unsigned int pid = 0; pid < P2.Cell0DsCoordinates.cols(); pid++)
+                    {
                         Vector3d esistente = P2.Cell0DsCoordinates.col(pid);
-                        if ((punto_medio - esistente).norm() < 1e-8) {
+                        if ((punto_medio - esistente).norm() < 1e-8)
+                        {
                             esiste = true;
                             id_punto_medio = pid;
                             break;
                         }
                     }
 
-                    if (!esiste) {
+                    if (!esiste)
+                    {
                         id_punto_medio = P2.Cell0DsCoordinates.cols();
                         P2.Cell0DsCoordinates.conservativeResize(3, id_punto_medio + 1);
                         P2.Cell0DsCoordinates.col(id_punto_medio) = punto_medio;
@@ -458,7 +466,8 @@ namespace PolyhedronLibrary
 
                     // Aggiungo i lati
                     pair<unsigned int, unsigned int> key1_lato = minmax(v1, id_punto_medio);
-                    if (MappaLati.find(key1_lato) == MappaLati.end()) {
+                    if (MappaLati.find(key1_lato) == MappaLati.end())
+                    {
                         unsigned int id_nuovo_lato = P2.Cell1DsId.size();
                         P2.Cell1DsId.push_back(id_nuovo_lato);
                         P2.Cell1DsExtrema.conservativeResize(2, id_nuovo_lato + 1);
@@ -468,7 +477,8 @@ namespace PolyhedronLibrary
                     }
 
                     pair<unsigned int, unsigned int> key2_lato = minmax(v2, id_punto_medio);
-                    if (MappaLati.find(key2_lato) == MappaLati.end()) {
+                    if (MappaLati.find(key2_lato) == MappaLati.end())
+                    {
                         unsigned int id_nuovo_lato = P2.Cell1DsId.size();
                         P2.Cell1DsId.push_back(id_nuovo_lato);
                         P2.Cell1DsExtrema.conservativeResize(2, id_nuovo_lato + 1);
@@ -515,7 +525,8 @@ namespace PolyhedronLibrary
                     unsigned int v2 = P1.Cell1DsExtrema(1, id_lato);
 
                     pair<unsigned int, unsigned int> key_lato = minmax(baricentro1, baricentro2);
-                    if (MappaLati.find(key_lato) == MappaLati.end()) {
+                    if (MappaLati.find(key_lato) == MappaLati.end())
+                    {
                         unsigned int id_nuovo_lato = P2.Cell1DsId.size();
                         P2.Cell1DsId.push_back(id_nuovo_lato);
                         P2.Cell1DsExtrema.conservativeResize(2, id_nuovo_lato + 1);
@@ -550,25 +561,30 @@ namespace PolyhedronLibrary
             }
 
             // Collego ciascun baricentro ai punti medi della stessa faccia
-            for (const auto& riga : PuntiMediP1) {
+            for (const auto& riga : PuntiMediP1)
+            {
                 unsigned int fid_P1 = riga.first;
                 unsigned int id_baricentro = IdBaricentri[fid_P1];
                 const vector<unsigned int>& punti_medi = riga.second;
 
-                for (unsigned int id_punto_medio : punti_medi) {
+                for (unsigned int id_punto_medio : punti_medi)
+                {
                     // Controllo duplicati: cerco se il lato esiste già in P2
                     bool lato_esiste = false;
-                    for (unsigned int eid = 0; eid < P2.Cell1DsId.size(); eid++) {
+                    for (unsigned int eid = 0; eid < P2.Cell1DsId.size(); eid++)
+                    {
                         unsigned int origine_lato = P2.Cell1DsExtrema(0, eid);
                         unsigned int fine_lato = P2.Cell1DsExtrema(1, eid);
                         if ((origine_lato == id_baricentro && fine_lato == id_punto_medio) ||
-                            (origine_lato == id_punto_medio && fine_lato == id_baricentro)) {
+                            (origine_lato == id_punto_medio && fine_lato == id_baricentro))
+                            {
                             lato_esiste = true;
                             break;
                         }
                     }
 
-                    if (!lato_esiste) {
+                    if (!lato_esiste)
+                    {
                         unsigned int id_nuovo_lato = P2.Cell1DsId.size();
                         P2.Cell1DsId.push_back(id_nuovo_lato);
                         P2.Cell1DsExtrema.conservativeResize(2, id_nuovo_lato + 1);
@@ -608,7 +624,7 @@ namespace PolyhedronLibrary
         for (unsigned int i = 0; i < numero_facce; i++)
         {
             P_duale.Cell0DsId[i] = i;
-            const vector<unsigned int> faccia = P.Cell2DsVertices[i];
+            const vector<unsigned int>& faccia = P.Cell2DsVertices[i];
             Vector3d baricentro(0, 0, 0);
             for (unsigned int vid : faccia) 
             {
@@ -622,7 +638,7 @@ namespace PolyhedronLibrary
         map<pair<unsigned int, unsigned int>, vector<unsigned int>> LatiFacce;
         for (unsigned int i = 0; i < numero_facce; i++) 
         {
-            const vector<unsigned int> faccia = P.Cell2DsVertices[i];
+            const vector<unsigned int>& faccia = P.Cell2DsVertices[i];
             unsigned int n = faccia.size();
             for (unsigned int j = 0; j < n; j++) 
             {
@@ -702,7 +718,7 @@ namespace PolyhedronLibrary
         P_duale.Cell2DsEdges.resize(P_duale.NumCell2Ds);
         for (unsigned int fid = 0; fid < P_duale.NumCell2Ds; fid++) 
         {
-            const vector<unsigned int> vertici = P_duale.Cell2DsVertices[fid];
+            const vector<unsigned int>& vertici = P_duale.Cell2DsVertices[fid];
             vector<unsigned int> id_lati;
             unsigned int n = vertici.size();
 
@@ -779,7 +795,7 @@ namespace PolyhedronLibrary
         ofstream output_file0("Cell0Ds.txt");
         output_file0 << "Id;X;Y;Z\n"; 
         
-        const MatrixXd scrivi_vertici = P.Cell0DsCoordinates;
+        const MatrixXd& scrivi_vertici = P.Cell0DsCoordinates;
         for(unsigned int id = 0; id < P.NumCell0Ds; id++)
             output_file0 << defaultfloat << id << ';' << scientific << setprecision(16) << scrivi_vertici(0,id) << ';' << scrivi_vertici(1,id) << ';' << scrivi_vertici(2,id) << '\n';
         output_file0.close();
@@ -788,7 +804,7 @@ namespace PolyhedronLibrary
         ofstream output_file1("Cell1Ds.txt");
         output_file1 << "Id;Origin;End\n"; // header
 
-        const MatrixXi scrivi_lati = P.Cell1DsExtrema;
+        const MatrixXi& scrivi_lati = P.Cell1DsExtrema;
         for(unsigned int id = 0; id < P.NumCell1Ds; id++)
             output_file1 << id << ';' << scrivi_lati(0,id) << ';' << scrivi_lati(1,id) << '\n';
         output_file1.close();
@@ -797,8 +813,8 @@ namespace PolyhedronLibrary
         ofstream output_file2("Cell2Ds.txt");
         output_file2 << "Id;NumVertices;Vertices;NumEdges;Edges\n"; 
         
-        const vector<vector<unsigned int>> scrivi_vertici_facce = P.Cell2DsVertices;
-        const vector<vector<unsigned int>> scrivi_lati_facce = P.Cell2DsEdges;
+        const vector<vector<unsigned int>>& scrivi_vertici_facce = P.Cell2DsVertices;
+        const vector<vector<unsigned int>>& scrivi_lati_facce = P.Cell2DsEdges;
         for(unsigned int id = 0; id < P.NumCell2Ds; id++)
         {
             output_file2 << id << ';' << scrivi_vertici_facce[id].size();
@@ -817,9 +833,9 @@ namespace PolyhedronLibrary
         ofstream output_file3("Cell3Ds.txt");
         output_file3 << "Id;NumVertices;Vertices;NumEdges;Edges;NumFaces;Faces\n";
 
-        const vector<unsigned int> scrivi_vertici_poliedro = P.Cell3DsVertices;
-        const vector<unsigned int> scrivi_lati_poliedro = P.Cell3DsEdges;
-        const vector<unsigned int> scrivi_facce_poliedro = P.Cell3DsFaces;
+        const vector<unsigned int>& scrivi_vertici_poliedro = P.Cell3DsVertices;
+        const vector<unsigned int>& scrivi_lati_poliedro = P.Cell3DsEdges;
+        const vector<unsigned int>& scrivi_facce_poliedro = P.Cell3DsFaces;
 
         // visto che abbiamo un solo poliedro, riscriviamo direttamente i dati della struct senza il ciclo
         unsigned int id =  P.Cell3DsId;
@@ -846,8 +862,8 @@ namespace PolyhedronLibrary
     // Calcolo il percorso più breve tra due vertici v1 e v2 all'interno del poliedro P
     vector<unsigned int> CalcoloCamminoMinimo(const Polyhedron& P, const unsigned int& v1, const unsigned int& v2)
     {
-        const MatrixXi lati = P.Cell1DsExtrema;
-        const MatrixXd coordinate = P.Cell0DsCoordinates;
+        const MatrixXi& lati = P.Cell1DsExtrema;
+        const MatrixXd& coordinate = P.Cell0DsCoordinates;
 
         // Costruisco lista adiacenza con pesi (grafo non orientato)
         vector<vector<pair<unsigned int, double>>> lista_adiacenza(P.NumCell0Ds); 
@@ -866,7 +882,7 @@ namespace PolyhedronLibrary
         }
 
         // Implemento Algoritmo Dijkstra
-        const unsigned int N = P.NumCell0Ds;
+        const unsigned int& N = P.NumCell0Ds;
         // Array delle distanze minime inizializzate a infinito
         vector<double> distanza(N, numeric_limits<double>::max());
         // Array dei predecessori per ricostruire il cammino

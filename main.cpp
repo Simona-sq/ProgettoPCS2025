@@ -75,7 +75,7 @@ int main(int argc, char* argv[])
 			cout<<"Eseguiamo la triangolazione di classe II"<<endl;
 			Polyhedron mesh_triangolata2 = TriangolazioneClasse2(mesh, b);
 			Polyhedron mesh_proiettata = ProiezioneSullaSfera(mesh_triangolata2);
-			poliedro_finale = mesh_proiettata;
+			poliedro_finale = mesh_triangolata2;
 		}
 	}
 	
