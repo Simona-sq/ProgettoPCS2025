@@ -860,7 +860,7 @@ namespace PolyhedronLibrary
     // ***************************************************************************
     // FUNZIONE CalcoloCamminoMinimo
     // Calcolo il percorso più breve tra due vertici v1 e v2 all'interno del poliedro P
-    vector<unsigned int> CalcoloCamminoMinimo(const Polyhedron& P, const unsigned int& v1, const unsigned int& v2)
+    pair<vector<unsigned int>, double> CalcoloCamminoMinimo(const Polyhedron& P, const unsigned int& v1, const unsigned int& v2)
     {
         const MatrixXi& lati = P.Cell1DsExtrema;
         const MatrixXd& coordinate = P.Cell0DsCoordinates;
@@ -924,7 +924,7 @@ namespace PolyhedronLibrary
         if(distanza[v2] == numeric_limits<double>::max())
         {
             cout << "Nessun percorso trovato tra " << v1 << " e " << v2 << endl;
-            return cammino;
+            return {cammino, distanza[v2]};
         }
 
         // Risalgo il cammino partendo da v2 fino a v1 usando parent[]
@@ -935,10 +935,7 @@ namespace PolyhedronLibrary
         // Inverto il cammino perché è stato costruito da fine a inizio
         reverse(cammino.begin(), cammino.end());
 
-        cout<<"Il cammino minimo che collega "<< v1 <<" e "<< v2 <<" ha "<<(cammino.size()-1)<< " lati "<< endl;
-        cout << "Il cammino minimo che collega " << v1 << " e " << v2 << " ha lunghezza: " << distanza[v2] << endl;
-
-        return cammino;
+        return {cammino, distanza[v2]};
     }
 
 }

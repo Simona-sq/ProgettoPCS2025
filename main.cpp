@@ -75,7 +75,7 @@ int main(int argc, char* argv[])
 			cout<<"Eseguiamo la triangolazione di classe II"<<endl;
 			Polyhedron mesh_triangolata2 = TriangolazioneClasse2(mesh, b);
 			Polyhedron mesh_proiettata = ProiezioneSullaSfera(mesh_triangolata2);
-			poliedro_finale = mesh_triangolata2;
+			poliedro_finale = mesh_proiettata;
 		}
 	}
 	
@@ -138,7 +138,9 @@ int main(int argc, char* argv[])
 		segments_properties.push_back(prop_lato);
 
 
-		vector<unsigned int> cammino = CalcoloCamminoMinimo(poliedro_finale, v1, v2);
+		auto [cammino, distanza] = CalcoloCamminoMinimo(poliedro_finale, v1, v2);
+		cout<<"Il cammino minimo che collega "<< v1 <<" e "<< v2 <<" ha "<<(cammino.size()-1)<< " lati "<< endl;
+        cout << "Il cammino minimo che collega " << v1 << " e " << v2 << " ha lunghezza: " << distanza << endl;
 	
 		// Riempio prop_vert
 		for(unsigned int id_v : cammino) proprieta_vertici[id_v] = 1.0; //imposta a 1.0 la proprietà dei vertici lungo il percorso

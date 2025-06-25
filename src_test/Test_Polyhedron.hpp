@@ -288,7 +288,7 @@ namespace PolyhedronLibrary {
         unsigned int v2 = 58;
     
         // Trovo il cammino minimo
-        vector<unsigned int> cammino = CalcoloCamminoMinimo(P_proiettato, v1, v2);
+        auto [cammino, distanza] = CalcoloCamminoMinimo(P_proiettato, v1, v2);
     
         // Verifiche sul cammino
         ASSERT_FALSE(cammino.empty()) << "Cammino non trovato.";
