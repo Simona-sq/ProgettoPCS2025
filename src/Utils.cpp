@@ -782,6 +782,16 @@ namespace PolyhedronLibrary
                                     points_properties,
                                     segments_properties);
         }
+        /*
+        {
+            utilities.ExportPolygons("./Cell2Ds.inp",
+                P.Cell0DsCoordinates,
+                P.Cell2DsVertices,
+                points_properties,
+                segments_properties);
+        }
+        */
+       
         EsportazioneFile(P);
     }
 

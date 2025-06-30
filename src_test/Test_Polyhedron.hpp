@@ -28,7 +28,6 @@ namespace PolyhedronLibrary {
             EXPECT_EQ(faccia.size(), 3);
 
         for (const auto& vertice : vertici){
-            cout << vertice.norm() << endl;
             EXPECT_NEAR(vertice.norm(), 1.0, 2.2e-16);}
     }
 
