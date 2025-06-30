@@ -446,7 +446,7 @@ namespace PolyhedronLibrary
                     for (unsigned int pid = 0; pid < P2.Cell0DsCoordinates.cols(); pid++)
                     {
                         Vector3d esistente = P2.Cell0DsCoordinates.col(pid);
-                        if ((punto_medio - esistente).norm() < 1e-8)
+                        if ((punto_medio - esistente).norm() < 2.2e-16)
                         {
                             esiste = true;
                             id_punto_medio = pid;

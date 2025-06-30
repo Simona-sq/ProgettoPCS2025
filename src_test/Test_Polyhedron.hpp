@@ -27,8 +27,9 @@ namespace PolyhedronLibrary {
         for (const auto& faccia : facce)
             EXPECT_EQ(faccia.size(), 3);
 
-        for (const auto& vertice : vertici)
-            EXPECT_NEAR(vertice.norm(), 1.0, 1e-8);
+        for (const auto& vertice : vertici){
+            cout << vertice.norm() << endl;
+            EXPECT_NEAR(vertice.norm(), 1.0, 2.2e-16);}
     }
 
 
@@ -46,7 +47,7 @@ namespace PolyhedronLibrary {
 
         for (int i = 0; i < P.Cell0DsCoordinates.cols(); i++) {
             double norma = P.Cell0DsCoordinates.col(i).norm();
-            EXPECT_NEAR(norma, 1.0, 1e-8);
+            EXPECT_NEAR(norma, 1.0, 2.2e-16);
         }
     }
 
@@ -155,7 +156,7 @@ namespace PolyhedronLibrary {
         for (int i = 0; i < P_proiettato.Cell0DsCoordinates.cols(); ++i) 
         {
             double norma = P_proiettato.Cell0DsCoordinates.col(i).norm();
-            EXPECT_NEAR(norma, 1.0, 1e-8) << "Vertice " << i << " non è unitario, ha norma = " << norma << endl;
+            EXPECT_NEAR(norma, 1.0, 2.2e-16) << "Vertice " << i << " non è unitario, ha norma = " << norma << endl;
         }
 
         // Verifico che gli ID siano invariati

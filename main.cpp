@@ -53,6 +53,12 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
+	if (b == c && c== 0)
+	{
+		cerr << "Poliedro nullo.\n";
+		return 1;
+	}
+
 	// Creo il solido platonico e riempo la struct
 	Polyhedron poliedro_finale;
 

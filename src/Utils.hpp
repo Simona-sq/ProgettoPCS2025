@@ -61,6 +61,6 @@ namespace PolyhedronLibrary
 
     // La funzione CalcoloCamminoMinimo calcola il percorso più breve tra due vertici v1 e v2 all'interno del poliedro P, 
     // usando l'algoritmo di Dijkstra, dove il peso degli archi è la distanza euclidea tra vertici connessi.
-    // Restituisce un vector con gli ID dei vertici nel cammino minimo.
+    // Restituisce un vector con gli ID dei vertici nel cammino minimo e un double con la lunghezza totale del cammino minimo.
     pair<vector<unsigned int>, double> CalcoloCamminoMinimo(const Polyhedron& P, const unsigned int& v1, const unsigned int& v2);
 }
