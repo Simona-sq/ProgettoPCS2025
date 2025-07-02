@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
 	// Controllo le condizioni su p e q
 	if (p < 3 || q < 3 || double (1.0/p)+double (1.0/q) <= 0.5)
 	{
-		cerr << "Errore: i parametri p e q non rispettano le condizioni dei poligoni platonici.\n";
+		cerr << "Errore: i parametri p e q non rispettano le condizioni dei solidi platonici.\n";
     	return 1;
 	}
 
