@@ -782,6 +782,17 @@ namespace PolyhedronLibrary
                                     points_properties,
                                     segments_properties);
         }
+        
+        /*
+        {
+            utilities.ExportPolygons("./Cell2Ds.inp",
+                P.Cell0DsCoordinates,
+                P.Cell2DsVertices,
+                points_properties,
+                segments_properties);
+        }
+        */
+       
         EsportazioneFile(P);
     }
 
@@ -905,9 +916,9 @@ namespace PolyhedronLibrary
                 break; 
             
             // Esplora tutti i vicini del nodo corrente
-            for(auto [vicino, peso] : lista_adiacenza[nodo_corrente])
+            for(auto [vicino, lunghezza] : lista_adiacenza[nodo_corrente])
             {
-                double nuova_distanza = dist_corrente + peso;
+                double nuova_distanza = dist_corrente + lunghezza;
                 // Se trovo un cammino più corto verso "vicino", aggiorno
                 if(nuova_distanza < distanza[vicino])
                 {

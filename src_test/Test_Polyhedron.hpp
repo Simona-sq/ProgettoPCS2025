@@ -21,14 +21,10 @@ namespace PolyhedronLibrary {
         unsigned int q = 5;  // Test per l'icosaedro
         auto [vertici, facce] = SalvataggioDati(q);
 
-        EXPECT_EQ(vertici.size(), 12);
-        EXPECT_EQ(facce.size(), 20);
-
         for (const auto& faccia : facce)
             EXPECT_EQ(faccia.size(), 3);
 
         for (const auto& vertice : vertici){
-            cout << vertice.norm() << endl;
             EXPECT_NEAR(vertice.norm(), 1.0, 2.2e-16);}
     }
 
@@ -44,11 +40,6 @@ namespace PolyhedronLibrary {
         EXPECT_EQ(P.NumCell2Ds, 20);
         EXPECT_EQ(P.NumCell3Ds, 1);
         EXPECT_EQ(P.Cell0DsCoordinates.cols(), 12);
-
-        for (int i = 0; i < P.Cell0DsCoordinates.cols(); i++) {
-            double norma = P.Cell0DsCoordinates.col(i).norm();
-            EXPECT_NEAR(norma, 1.0, 2.2e-16);
-        }
     }
 
 

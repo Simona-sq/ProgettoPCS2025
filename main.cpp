@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
 	// Controllo le condizioni su p e q
 	if (p < 3 || q < 3 || double (1.0/p)+double (1.0/q) <= 0.5)
 	{
-		cerr << "Errore: i parametri p e q non rispettano le condizioni dei poligoni platonici.\n";
+		cerr << "Errore: i parametri p e q non rispettano le condizioni dei solidi platonici.\n";
     	return 1;
 	}
 
@@ -50,12 +50,6 @@ int main(int argc, char* argv[])
 	if (b != c && b!= 0 && c!= 0)
 	{
 		cerr << "Errore: classe non trattata.\n";
-		return 1;
-	}
-
-	if (b == c && c== 0)
-	{
-		cerr << "Poliedro nullo.\n";
 		return 1;
 	}
 
