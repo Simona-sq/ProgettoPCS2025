@@ -73,7 +73,7 @@ int main(int argc, char* argv[])
 			unsigned int t_value = b + c; // valore che mi indica in quante parti dividere ogni lato del triangolo
 			Polyhedron mesh_triangolata1 = TriangolazioneClasse1(mesh, t_value);
 			Polyhedron mesh_proiettata = ProiezioneSullaSfera(mesh_triangolata1);
-			poliedro_finale = mesh_proiettata;
+			poliedro_finale = mesh_triangolata1;
 		}
 
 		else // TRIANGOLAZIONE DI CLASSE II

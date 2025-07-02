@@ -443,7 +443,6 @@ actor "Utente" as User
 participant "CalcoloCamminoMinimo" as CCM
 participant "Polyhedron" as P
 participant "ListaAdiacenza"
-participant "Distanze"
 participant "Heap"
 participant "Parent"
 participant "Cammino"
@@ -459,9 +458,8 @@ loop per ogni lato
 end
 
 == Inizializzazione Dijkstra ==
-CCM -> Distanze : Inizializza tutte le distanze a ∞
+CCM -> Heap : Inizializza coda con v1 e distanza 0
 CCM -> Parent : Inizializza tutti i predecessori a N
-CCM -> Heap : Inserisce v1 con distanza 0
 
 == Esecuzione Dijkstra ==
 loop finché heap non è vuoto
@@ -471,11 +469,10 @@ loop finché heap non è vuoto
         CCM -> CCM : Interrompe il ciclo
     else
         loop per ogni vicino
-            CCM -> Distanze : Calcola nuova distanza
+            CCM -> CCM : Calcola nuova distanza
             alt nuova distanza < distanza attuale
-                CCM -> Distanze : Aggiorna distanza
-                CCM -> Parent : Aggiorna predecessore
                 CCM -> Heap : Inserisce vicino aggiornato
+                CCM -> Parent : Aggiorna predecessore
             end
         end
     end
@@ -486,10 +483,9 @@ alt distanza[v2] == ∞
     CCM -> User : Nessun percorso trovato
     return []
 else
-    CCM -> Parent : Ricostruisce cammino a ritroso
-    CCM -> Cammino : Costruisce cammino
-    Cammino -> Cammino : Inverte ordine
-    CCM -> User : Stampa info cammino
-    return cammino
+    CCM -> Parent : Ricostruisce cammino da v2 a v1
+    CCM -> Cammino : Inverte cammino
+    CCM -> User : Ritorna cammino e lunghezza
 end
 @enduml
+
